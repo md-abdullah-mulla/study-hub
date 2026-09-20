@@ -9,14 +9,20 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "smoke": "esbuild smoke/bootstrap.mjs --bundle --format=esm --outfile=smoke/out.mjs --loader:.jsx=jsx --jsx=automatic --platform=node --external:jsdom --log-level=warning && node smoke/out.mjs",
-    "ci": "npm run lint && npm run smoke && npm run build"
+    "ci": "npm run lint && npm run smoke && npm run build",
+    "build:pages": "vite build --mode pages && node scripts/postbuild-pages.mjs",
+    "dev:pages": "vite --mode pages",
+    "preview:pages": "vite preview --outDir dist --port 4173 --strictPort",
+    "test:browser": "node --import ./test/register-alias.mjs --test test/*.test.mjs",
+    "smoke:offline": "node smoke/build-offline.mjs && node smoke/out-offline.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "sql.js": "^1.14.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
@@ -24,6 +30,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.6.1",
     "esbuild": "^0.28.2",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "oxlint": "^1.81.0",
     "postcss": "^8.5.28",

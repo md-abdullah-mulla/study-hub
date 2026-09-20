@@ -1,5 +1,5 @@
 import { createApp } from './app.js';
-import { bootstrapDatabase } from './db/migrate.js';
+import { bootstrapDatabase } from './db/nodeBootstrap.js';
 import { config } from './config.js';
 
 const info = bootstrapDatabase();

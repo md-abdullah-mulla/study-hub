@@ -13,6 +13,19 @@ export function camelAll(rows) {
 }
 
 /**
+ * Merges a partial update into the current row.
+ * Only keys that were actually provided (not `undefined`) are applied — a
+ * partial PATCH must never blank out columns the caller did not mention.
+ */
+export function mergeDefined(current, patch = {}) {
+  const merged = { ...current };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value !== undefined) merged[key] = value;
+  }
+  return merged;
+}
+
+/**
  * SQLite stores booleans as 0/1 — convert the columns we care about.
  * Missing rows are returned untouched (undefined/null) so repositories can
  * report a clean 404 instead of crashing on an absent record.

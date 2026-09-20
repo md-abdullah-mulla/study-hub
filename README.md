@@ -1,5 +1,12 @@
 # 🎓 Smart Semester Study Management System
 
+### 🌐 Live app: **https://md-abdullah-mulla.github.io/study-hub/**
+
+GitHub Pages-এ deploy করা version সম্পূর্ণ server-ছাড়া চলে — SQLite (WebAssembly) ব্রাউজারেই চলে,
+তাই ফোন/ল্যাপটপ থেকে যেকোনো সময় খুলতে পারবে। ডেটা সেই ব্রাউজারের **IndexedDB**-তে জমা থাকে
+(তাই অন্য ব্রাউজার/ডিভাইসে গেলে progress আলাদা থাকবে) — মাঝে মাঝে **Settings → Backup (JSON)** নামিয়ে রাখো।
+নিজের server/changes চালাতে চাইলে নিচের “কীভাবে চালাব” দেখো।
+
 **Diploma in Computer Science & Technology — Semester 6** এর জন্য নিজের personal study manager.
 লক্ষ্য একটাই: **Study → Track → Analyse → Revise → Improve**
 
@@ -16,7 +23,7 @@
 | | |
 | --- | --- |
 | Repo | https://github.com/md-abdullah-mulla/study-hub |
-| Stack | React 19 + Vite + Tailwind · Node 20 + Express · SQLite · Recharts |
+| Stack | React 19 + Vite + Tailwind · Node 20 + Express · SQLite (better-sqlite3 on the server, sql.js/WASM in the browser) · Recharts |
 | Status | Phase 1 (MVP) complete — 16 backend tests + 38 end-to-end UI checks passing |
 
 <!-- CI badge: নিচের line-টা uncomment করো যখন docs/github-actions-ci.yml কে
@@ -37,7 +44,20 @@
 পুরো app (UI + API) deploy করে দেবে — কোনো configuration লাগবে না। বিস্তারিত নিচে “Deploy” section-এ।
 
 > ⚠️ Render free plan-এ disk ephemeral: প্রতিবার deploy-এ progress reset হবে। স্থায়ী data চাইলে persistent
-> disk (paid) অথবা নিজের PC/ডকারে চালাও — `render.yaml`-তে `disk:` অংশ uncomment করলেই হবে।
+> disk (paid) অথবা GitHub Pages version (data ব্রাউজারে থাকে) ব্যবহার করো।
+
+### GitHub Pages (যেভাবে এই live link বানানো হয়েছে)
+
+```bash
+cd client
+npm run build:pages      # ভেতরে: vite build --mode pages + 404.html ও .nojekyll তৈরি
+# তারপর dist/ ফোল্ডারটাই gh-pages branch-এ push করা হয়েছে
+```
+
+`build:pages` mode-এ পুরো backend ব্রাউজারে চলে যায়: `client/.env.pages`-এর `VITE_API_MODE=local`,
+`src/browser-db/` (sql.js adapter + express-lite router + fetch bridge) আর Vite alias দুটো —
+`express → express-lite`, `db/connection.js → connectionShim`। ফলে server-এর **একই** routes,
+services, repositories ব্রাউজারেও অপরিবর্তিতভাবে চলে (কোনো duplicate logic নেই)।
 
 ---
 
@@ -237,6 +257,8 @@ table, API আর UI-এর জায়গা আগে থেকেই রা�
 | --- | --- | --- |
 | `cd server && npm test` | 16টা API/business-logic test: percentage maths, revision schedule, import parsing, search, plan, export, validation | ✅ 16/16 |
 | `cd client && npm run smoke` | আসল app jsdom-এ render করে ৩৮টা interaction চালায় (status toggle, note লেখা, plan tick, import paste, search, offline error, retry) — **আগে `cd server && npm start` চালু থাকতে হবে** | ✅ 38/38 |
+| `cd client && npm run test:browser` | ব্রাউজার-mode backend: seed, progress maths, CRUD, import, export, reload-এর পর data ফিরে আসা, fetch bridge | ✅ 6/6 |
+| `cd client && npm run smoke:offline` | **server ছাড়া** পুরো UI (jsdom + sql.js) — live app যা করে ঠিক তাই | ✅ 23/23 |
 | `cd client && npm run lint` | oxlint (React hooks rules) | ✅ 0 warning |
 | `cd client && npm run build` | production build | ✅ |
 

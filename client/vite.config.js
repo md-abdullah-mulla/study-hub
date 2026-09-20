@@ -1,20 +1,56 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    host: '0.0.0.0',   // preview needs to bind outside localhost
-    port: 5173,
-    strictPort: true,
-    // The platform preview proxy uses a generated hostname, so allow it.
-    allowedHosts: true,
-    proxy: {
-      // one origin for the browser: /api -> Express (no CORS trouble, no hardcoded localhost)
-      '/api': {
-        target: process.env.API_URL ?? 'http://127.0.0.1:4000',
-        changeOrigin: true,
+const here = path.dirname(fileURLToPath(import.meta.url));
+const browserDbDir = path.join(here, 'src', 'browser-db');
+
+export default defineConfig(({ mode }) => {
+  // `vite build --mode pages` → the static GitHub Pages build, where the whole
+  // backend (SQLite as WebAssembly) runs inside the page and there is no server.
+  const isPages = mode === 'pages';
+
+  return {
+    // Pages serves the app from /study-hub/; the dev server and other hosts use /
+    base: isPages ? '/study-hub/' : '/',
+
+    plugins: [react()],
+
+    resolve: {
+      alias: [
+        // The browser build swaps exactly two entry points of the server code and
+        // leaves every route, service and repository untouched:
+        //   express            -> express-lite (a ~150 line Router for the browser)
+        //   db/connection.js   -> connectionShim (same `db` API on top of sql.js)
+        { find: 'express', replacement: path.join(browserDbDir, 'express-lite.js') },
+        // matches './connection.js', '../db/connection.js', '../../db/connection.js' …
+        // (the regex must cover the WHOLE specifier, otherwise only the matched part is replaced)
+        { find: /^(?:\.{1,2}\/)+(?:db\/)?connection\.js$/, replacement: path.join(browserDbDir, 'connectionShim.js') },
+      ],
+    },
+
+    server: {
+      host: '0.0.0.0', // the preview needs to bind outside localhost
+      port: 5173,
+      strictPort: true,
+      allowedHosts: true, // the preview proxy uses a generated hostname
+      fs: {
+        // the UI imports shared code (and schema.sql) from ../server
+        allow: [here, path.join(here, '..', 'server')],
+      },
+      proxy: {
+        // one origin for the browser: /api -> Express (no CORS, no hardcoded localhost)
+        '/api': {
+          target: process.env.API_URL ?? 'http://127.0.0.1:4000',
+          changeOrigin: true,
+        },
       },
     },
-  },
+
+    build: {
+      outDir: 'dist',
+      chunkSizeWarningLimit: 1600, // sql.js (the in-browser SQLite) is a large chunk by design
+    },
+  };
 });

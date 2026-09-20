@@ -1,5 +1,5 @@
 import { db } from '../db/connection.js';
-import { camel, camelAll } from '../utils/rows.js';
+import { camel, camelAll, mergeDefined } from '../utils/rows.js';
 import { nowIso } from '../utils/date.js';
 
 export const chapterRepo = {
@@ -62,7 +62,7 @@ export const chapterRepo = {
   update(id, data) {
     const current = chapterRepo.findById(id);
     if (!current) return null;
-    const merged = { ...current, ...data };
+    const merged = mergeDefined(current, data);
     db.prepare(
       `UPDATE chapters SET number = @number, name = @name, name_bn = @nameBn,
          notes = @notes, order_index = @orderIndex, updated_at = @updatedAt

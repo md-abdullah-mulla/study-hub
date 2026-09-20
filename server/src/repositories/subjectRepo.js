@@ -1,5 +1,5 @@
 import { db } from '../db/connection.js';
-import { camel, camelAll, withBooleans } from '../utils/rows.js';
+import { camel, camelAll, withBooleans, mergeDefined } from '../utils/rows.js';
 import { nowIso } from '../utils/date.js';
 
 const BOOLS = ['isArchived'];
@@ -59,7 +59,7 @@ export const subjectRepo = {
   update(id, data) {
     const current = subjectRepo.findById(id);
     if (!current) return null;
-    const merged = { ...current, ...data };
+    const merged = mergeDefined(current, data);
     db.prepare(
       `UPDATE subjects SET
          name = @name, name_bn = @nameBn, code = @code, color = @color,
@@ -149,7 +149,7 @@ export const chapterRepo = {
   update(id, data) {
     const current = chapterRepo.findById(id);
     if (!current) return null;
-    const merged = { ...current, ...data };
+    const merged = mergeDefined(current, data);
     db.prepare(
       `UPDATE chapters SET number = @number, name = @name, name_bn = @nameBn,
          notes = @notes, order_index = @orderIndex, updated_at = @updatedAt

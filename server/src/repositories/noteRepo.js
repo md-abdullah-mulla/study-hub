@@ -1,5 +1,5 @@
 import { db } from '../db/connection.js';
-import { camel, camelAll } from '../utils/rows.js';
+import { camel, camelAll, mergeDefined } from '../utils/rows.js';
 import { nowIso } from '../utils/date.js';
 
 export const noteRepo = {
@@ -47,12 +47,13 @@ export const noteRepo = {
     return noteRepo.findById(info.lastInsertRowid);
   },
 
-  update(id, { title, body }) {
+  update(id, patch) {
     const current = noteRepo.findById(id);
     if (!current) return null;
+    const merged = mergeDefined(current, patch);
     db.prepare('UPDATE notes SET title = ?, body = ?, updated_at = ? WHERE id = ?').run(
-      title ?? current.title,
-      body ?? current.body,
+      merged.title ?? null,
+      merged.body,
       nowIso(),
       id
     );

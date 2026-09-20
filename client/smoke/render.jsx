@@ -58,9 +58,6 @@ async function renderAt(path, settle = 1500) {
 const byText = (label, tag = 'button') =>
   [...document.querySelectorAll(tag)].find((el) => el.textContent.trim().includes(label));
 
-const byTextExact = (label, tag = 'button') =>
-  [...document.querySelectorAll(tag)].find((el) => el.textContent.trim() === label);
-
 async function click(el, settle = 700) {
   if (!el) throw new Error('element not found');
   await act(async () => {
@@ -103,6 +100,12 @@ async function resetProgressFromSeed() {
       });
     }
   }
+  // an earlier run may have been interrupted after creating test subjects
+  const current = await client('/api/progress-tree');
+  for (const subject of current.subjects) {
+    if (subject.name.startsWith('QA ')) await client(`/api/subjects/${subject.id}`, 'DELETE');
+  }
+
   // a previous run may have ticked or deleted today's plan items
   const plan = await client('/api/plan');
   for (const item of plan) await client(`/api/plan/${item.id}`, 'DELETE');

@@ -1,4 +1,6 @@
-const BASE = `${import.meta.env?.VITE_API_URL ?? ''}/api`;
+import { env } from '../lib/env.js';
+
+const BASE = `${env.VITE_API_URL ?? ''}/api`;
 
 /**
  * Tiny API client. Every network call in the app goes through here so the

@@ -1,37 +1,84 @@
-import { Download, Database, Info, FileSpreadsheet, RotateCcw } from 'lucide-react';
+import { useState } from 'react';
+import { Download, Database, Info, FileSpreadsheet, RotateCcw, Loader2 } from 'lucide-react';
 import { Card, CardHeader, StatCard } from '../components/ui/index.jsx';
 import { useAppData } from '../state/AppDataContext.jsx';
+import { useToast } from '../state/ToastContext.jsx';
 import { api } from '../api/client.js';
+import { downloadFromApi } from '../browser-db/download.js';
 import { PHASE_INFO } from '../components/layout/navItems.js';
+import { isLocalApiMode } from '../lib/env.js';
 
-/** Settings + Backup/Export (spec §31) + the development roadmap. */
+/**
+ * Settings + Backup/Export (spec §31) + the development roadmap.
+ *
+ * Export goes through fetch + a Blob download instead of a plain `<a href>`,
+ * because the GitHub Pages build has no server that could answer those URLs.
+ */
+function ExportTile({ icon: Icon, iconClass, title, description, fileName, path, tone }) {
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  const run = async () => {
+    setBusy(true);
+    try {
+      await downloadFromApi(fileName, path);
+      toast.success(`${fileName} download হয়েছে`);
+    } catch (error) {
+      toast.error(`Export ব্যর্থ: ${error.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={run}
+      disabled={busy}
+      className={`rounded-xl border p-3.5 text-left transition-colors disabled:opacity-60 ${tone}`}
+    >
+      <div className="flex items-center gap-2 text-sm font-medium text-ink-900">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin text-ink-400" /> : <Icon className={`h-4 w-4 ${iconClass}`} />}
+        {title}
+      </div>
+      <p className="muted mt-1">{description}</p>
+    </button>
+  );
+}
+
 export default function SettingsPage() {
   const { meta, subjects, semester } = useAppData();
   const totalChapters = subjects.reduce((n, s) => n + s.chapters.length, 0);
+  const localMode = isLocalApiMode;
 
   return (
     <div className="space-y-4 sm:space-y-5">
       <Card>
         <CardHeader title="Data Backup & Export" subtitle="নিজের ডেটা সবসময় হাতের কাছে রাখো" icon={Download} />
         <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
-          <a href={api.backupUrl} className="rounded-xl border border-ink-200 p-3.5 hover:bg-ink-50">
-            <div className="flex items-center gap-2 text-sm font-medium text-ink-900">
-              <Database className="h-4 w-4 text-brand-600" /> Backup (JSON)
-            </div>
-            <p className="muted mt-1">
-              সব subject, chapter, topic, note, plan — পুরো backup এক ফাইলে। পরে আবার import করার জন্য রেখে দাও।
-            </p>
-          </a>
-          <a href={api.csvUrl} className="rounded-xl border border-ink-200 p-3.5 hover:bg-ink-50">
-            <div className="flex items-center gap-2 text-sm font-medium text-ink-900">
-              <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Topic list (CSV)
-            </div>
-            <p className="muted mt-1">Excel/Google Sheets-এ খুলে প্রিন্ট বা নিজের মতো সাজিয়ে নিতে পারবে।</p>
-          </a>
+          <ExportTile
+            icon={Database}
+            iconClass="text-brand-600"
+            title="Backup (JSON)"
+            description="সব subject, chapter, topic, note, plan — পুরো backup এক ফাইলে। পরে restore করতে পারবে।"
+            fileName="study-backup.json"
+            path={api.backupUrl}
+            tone="border-ink-200 hover:bg-ink-50"
+          />
+          <ExportTile
+            icon={FileSpreadsheet}
+            iconClass="text-emerald-600"
+            title="Topic list (CSV)"
+            description="Excel/Google Sheets-এ খুলে প্রিন্ট বা নিজের মতো সাজিয়ে নিতে পারবে।"
+            fileName="study-topics.csv"
+            path={api.csvUrl}
+            tone="border-ink-200 hover:bg-ink-50"
+          />
         </div>
         <div className="border-t border-ink-100 px-4 py-3 sm:px-5">
           <p className="muted">
-            PDF export আর auto-backup Phase 5-এ যোগ হবে। এখন JSON/CSV দিয়ে নিজে backup রাখো।
+            {localMode
+              ? 'এই version-এ তোমার ডেটা ব্রাউজারের IndexedDB-তে থাকে (কোনো server নেই)। তাই মাঝে মাঝে JSON backup নামিয়ে রাখা জরুরি — ব্রাউজার data clear করলে বা অন্য ব্রাউজারে গেলে progress থাকবে না।'
+              : 'PDF export আর auto-backup Phase 5-এ যোগ হবে। এখন JSON/CSV দিয়ে নিজে backup রাখো।'}
           </p>
         </div>
       </Card>

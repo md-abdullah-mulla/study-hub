@@ -3,7 +3,7 @@ node_modules/
 
 # build output
 dist/
-**/smoke/out.mjs
+**/smoke/out*.mjs
 *.tsbuildinfo
 
 # local database (your personal study data — never commit this)

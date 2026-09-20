@@ -15,7 +15,7 @@ process.env.DB_FILE = path.join(tmpDir, 'test.db');
 process.env.NODE_ENV = 'test';
 
 const { createApp } = await import('../src/app.js');
-const { bootstrapDatabase } = await import('../src/db/migrate.js');
+const { bootstrapDatabase } = await import('../src/db/nodeBootstrap.js');
 const { seed } = await import('../src/db/seed.js');
 
 bootstrapDatabase();
@@ -317,6 +317,28 @@ test('plan items can be ticked, renamed and un-ticked', async () => {
 
   const missing = await patch('/api/plan/999999', { isDone: true });
   assert.equal(missing.status, 404);
+});
+
+test('partial updates only touch the fields that were sent', async () => {
+  const tree = await get('/api/progress-tree');
+  const topic = tree.body.subjects[0].chapters[0].topics[0];
+
+  // send ONE field: name, importance and status must stay untouched
+  const updated = await patch(`/api/topics/${topic.id}`, { description: 'শুধু description বদলেছে' });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.description, 'শুধু description বদলেছে');
+  assert.equal(updated.body.name, topic.name, 'name must not be blanked out');
+  assert.equal(updated.body.importance, topic.importance);
+  assert.equal(updated.body.status, topic.status);
+
+  const chapter = await patch(`/api/chapters/${topic.chapterId}`, { notes: 'chapter note only' });
+  assert.equal(chapter.body.notes, 'chapter note only');
+  assert.equal(chapter.body.name, tree.body.subjects[0].chapters[0].name);
+
+  const subject = await patch(`/api/subjects/${tree.body.subjects[0].id}`, { code: '28561' });
+  assert.equal(subject.body.code, '28561');
+  assert.equal(subject.body.name, tree.body.subjects[0].name);
+  assert.equal(subject.body.color, tree.body.subjects[0].color);
 });
 
 test('exports work: JSON backup and CSV of all topics', async () => {

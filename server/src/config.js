@@ -1,16 +1,22 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const here = path.dirname(fileURLToPath(import.meta.url));
-
-/** Project root = .../study-hub */
-export const ROOT_DIR = path.resolve(here, '..', '..');
+/**
+ * Configuration in one place.
+ *
+ * This module is deliberately PURE (no Node built-ins, no file paths) because
+ * the browser build (GitHub Pages mode) imports it too — see
+ * client/src/browser-db/. Anything Node-only (the SQLite file path) lives in
+ * db/connection.js, and the web-client folder path lives in app.js.
+ */
+const env = globalThis.process?.env ?? {};
+const safeNumber = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
 
 export const config = {
-  env: process.env.NODE_ENV ?? 'development',
-  port: Number(process.env.PORT ?? 4000),
-  /** SQLite file. Later: swap with DATABASE_URL + postgres adapter in db/connection.js */
-  dbFile: process.env.DB_FILE ?? path.join(ROOT_DIR, 'data', 'study.db'),
+  env: env.NODE_ENV ?? 'development',
+  port: safeNumber(env.PORT, 4000),
+  /** Human readable database name, shown in logs and the /api/meta route. */
+  databaseLabel: 'sqlite',
   /** Phase-1 runs as a single local user (auth comes in a later phase). */
   defaultUser: {
     id: 1,

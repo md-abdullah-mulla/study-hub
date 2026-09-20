@@ -3,7 +3,11 @@ import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
 import { apiRouter } from './routes/index.js';
-import { config, ROOT_DIR } from './config.js';
+import { fileURLToPath } from 'node:url';
+import { config } from './config.js';
+
+/** Repo root (.../study-hub) — used only to find the built client in single-service mode. */
+const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 import { HttpError } from './utils/http.js';
 
 export function createApp() {

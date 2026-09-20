@@ -1,4 +1,3 @@
-import { bootstrapDatabase } from './migrate.js';
 import { subjectRepo } from '../repositories/subjectRepo.js';
 import { chapterRepo } from '../repositories/chapterRepo.js';
 import { topicRepo } from '../repositories/topicRepo.js';
@@ -161,7 +160,6 @@ const SEMESTER_6 = [
 ];
 
 export function seed({ silent = false } = {}) {
-  bootstrapDatabase();
   const userId = config.defaultUser.id;
   let created = { subjects: 0, chapters: 0, topics: 0 };
 
@@ -201,9 +199,4 @@ export function seed({ silent = false } = {}) {
     console.log('[seed] done:', created);
   }
   return created;
-}
-
-// allow `npm run seed`
-if (import.meta.url === `file://${process.argv[1]}`) {
-  seed();
 }
