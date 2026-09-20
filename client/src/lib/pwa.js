@@ -102,7 +102,11 @@ export function registerServiceWorker({ onUpdateReady, onOfflineReady } = {}) {
   // only add a second cache to keep in sync
   if (isDesktopApp()) return () => {};
 
-  const swUrl = new URL('sw.js', document.baseURI).href;
+  // document.baseURI is the *current page* — on a deep link such as
+  // /subjects/4/chapters/9 that would look for /subjects/4/chapters/sw.js.
+  // import.meta.env.BASE_URL is the app's own base ("/" or "/study-hub/").
+  const appBase = import.meta.env?.BASE_URL ?? '/';
+  const swUrl = new URL(`${appBase}sw.js`, window.location.origin).href;
   let cancelled = false;
 
   navigator.serviceWorker

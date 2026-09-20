@@ -9,3 +9,9 @@ client/dist-vercel/
 *.db
 *.db-wal
 *.db-shm
+
+# The desktop app is not part of the web deployment — it ships through GitHub
+# Releases. Without this the CLI tries to upload release/ (hundreds of MB) and
+# gets killed before the build even starts.
+desktop/
+client/dist-desktop/

@@ -88,6 +88,26 @@ for (const [route, label] of ROUTES) {
 }
 check('no screen prints "undefined" / "NaN" / "[object Object]"', dirtyScreens === 0, `${dirtyScreens} screen(s) affected`);
 
+// a deep link must not break the app's own files: relative paths such as
+// "fonts/fonts.css" would be resolved against /subjects/4/chapters/9 and 404
+await page.goto(`${BASE}subjects/1`, { waitUntil: 'load' }).catch(() => {});
+await page.waitForTimeout(2000);
+const assetCheck = await page.evaluate(async () => {
+  const html = await (await fetch(location.href, { headers: { Accept: 'text/html' } })).text();
+  const wanted = [...html.matchAll(/href="([^"]*(?:fonts|manifest|icons)[^"]*)"/g)].map((m) => m[1]);
+  const out = {};
+  for (const href of wanted.slice(0, 4)) {
+    const res = await fetch(href);
+    out[href] = `${res.status} ${(res.headers.get('content-type') ?? '').split(';')[0]}`;
+  }
+  return out;
+});
+check(
+  'on a deep link the app still finds its fonts/manifest/icons',
+  Object.values(assetCheck).every((value) => value.startsWith('200 ')) && Object.values(assetCheck).some((value) => value.includes('css') || value.includes('manifest')),
+  JSON.stringify(assetCheck)
+);
+
 // ---------------------------------------------------- 2. dashboard + navigation
 const treeShape = await page.evaluate(() => fetch('/api/progress-tree').then((r) => r.text()));
 const tree = JSON.parse(treeShape);
