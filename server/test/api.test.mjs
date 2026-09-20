@@ -1,6 +1,7 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { CONCEPT_ENTRIES } from '../src/services/illustration/conceptLibrary.js';
+import { byteLength } from '../src/utils/bytes.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -1410,6 +1411,15 @@ test('advanced analytics counts a real quiz attempt and names the weak chapter',
 // Auto backup (Phase 5) — snapshot, restore, retention
 // ---------------------------------------------------------------------------
 
+test('byteLength counts real UTF-8 bytes (browser build has no Buffer)', () => {
+  assert.equal(byteLength('abc'), 3);
+  assert.equal(byteLength(''), 0);
+  assert.equal(byteLength(null), 0);
+  // Bangla letters are 3 bytes each, so a Bangla note is longer than it looks
+  assert.equal(byteLength('বাংলা'), 15);
+  assert.equal(byteLength('{"a":1}'), 7);
+});
+
 test('a backup snapshot can be taken, listed, downloaded and restored', async () => {
   const tree = await get('/api/progress-tree');
   const subject = tree.body.subjects[0];
@@ -1435,6 +1445,11 @@ test('a backup snapshot can be taken, listed, downloaded and restored', async ()
   const payload = await get(`/api/backups/${created.body.id}`);
   assert.match(payload.body.payload, /"subjects"/);
   assert.ok(payload.body.payload.includes('backup QA note'), 'the note is inside the snapshot');
+  assert.equal(
+    payload.body.sizeBytes,
+    byteLength(payload.body.payload),
+    'the stored size equals the real UTF-8 byte length of the snapshot'
+  );
 
   // wipe the data, then restore it
   await del(`/api/subjects/${subject.id}`);

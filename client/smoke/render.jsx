@@ -163,15 +163,21 @@ if (firstPlanCheckbox) {
 }
 
 // ================================================================ 3. SUBJECT + CHAPTER LIST
+// Ids are not stable across a database reset, so the fixture is looked up by
+// name instead of being hardcoded — the smoke keeps working on a fresh DB.
+const fixtureTree = await client('/api/progress-tree');
+const microSubject = fixtureTree.subjects.find((s) => s.name === 'Microcontroller');
+const memoryChapter = microSubject.chapters.find((c) => c.name.startsWith('Memory Organization'));
+
 await root.unmount();
-root = await renderAt('/subjects/4'); // Microcontroller
+root = await renderAt(`/subjects/${microSubject.id}`);
 page = text();
 check('subject page lists Microcontroller chapters', page.includes('Microcontroller') && page.includes('Interrupts') && page.includes('Memory Organization'));
 check('subject page shows chapter progress bars', page.includes('0%') || page.includes('%'));
 
 // ================================================================ 4. CHAPTER: TOGGLE STATUS
 await root.unmount();
-root = await renderAt('/subjects/4/chapters/7'); // Memory Organization
+root = await renderAt(`/subjects/${microSubject.id}/chapters/${memoryChapter.id}`);
 page = text();
 check('chapter page shows the topic list', page.includes('Topic list') && page.includes('Memory types (ROM/RAM)'));
 

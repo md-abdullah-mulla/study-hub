@@ -1,6 +1,7 @@
 import { db } from '../db/connection.js';
 import { camel, camelAll } from '../utils/rows.js';
 import { nowIso } from '../utils/date.js';
+import { byteLength } from '../utils/bytes.js';
 
 /**
  * Rolling backup snapshots. The heavy column (`payload`) is only selected when
@@ -12,7 +13,7 @@ export const backupRepo = {
       .prepare(
         'INSERT INTO backups (user_id, kind, label, size_bytes, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)'
       )
-      .run(userId, kind, label, Buffer.byteLength(payload, 'utf8'), payload, nowIso());
+      .run(userId, kind, label, byteLength(payload), payload, nowIso());
     return backupRepo.findMeta(info.lastInsertRowid);
   },
 
