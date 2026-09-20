@@ -1,6 +1,14 @@
 # 🎓 Smart Semester Study Management System
 
-### 🌐 Live app: **https://md-abdullah-mulla.github.io/study-hub/**
+### 🌐 Live app
+
+| Host | Link |
+|---|---|
+| Vercel | **https://study-hub-virid.vercel.app/** |
+| GitHub Pages | **https://md-abdullah-mulla.github.io/study-hub/** |
+
+Both run the whole backend (SQLite compiled to WebAssembly) inside the browser, so the app works
+with no server — and offline once loaded.
 
 GitHub Pages-এ deploy করা version সম্পূর্ণ server-ছাড়া চলে — SQLite (WebAssembly) ব্রাউজারেই চলে,
 তাই ফোন/ল্যাপটপ থেকে যেকোনো সময় খুলতে পারবে। ডেটা সেই ব্রাউজারের **IndexedDB**-তে জমা থাকে

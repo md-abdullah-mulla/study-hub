@@ -1,0 +1,11 @@
+# Vercel deploy must not carry your personal study data or local build junk
+data/
+node_modules/
+client/node_modules/
+server/node_modules/
+client/dist/
+client/dist-vercel/
+.git/
+*.db
+*.db-wal
+*.db-shm

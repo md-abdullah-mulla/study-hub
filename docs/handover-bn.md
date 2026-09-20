@@ -2,7 +2,13 @@
 
 ## 🌐 লাইভ লিংক
 
-**https://md-abdullah-mulla.github.io/study-hub/**
+| হোস্ট | লিংক | কেমন |
+|---|---|---|
+| **Vercel** (নতুন) | **https://study-hub-virid.vercel.app/** | মূল ডোমেইনে (`/`), `/report`, `/exam`, `/analytics` deep link সরাসরি খোলে |
+| **GitHub Pages** | **https://md-abdullah-mulla.github.io/study-hub/** | `/study-hub/` path-এ, SPA fallback (404.html) দিয়ে deep link খোলে |
+
+দুই জায়গায় একই অ্যাপ — data ব্রাউজারের ভিতরেই (SQLite → WebAssembly) থাকে, তাই কোনো
+সার্ভার বা ডেটাবেস হোস্টিং লাগে না, আর ইন্টারনেট ছাড়াও চলে।
 
 ফোন, ল্যাপটপ, ট্যাব — যেকোনো ডিভাইসে খুললে অ্যাপ চলে যাবে। ফোনে Chrome খুলে
 **⋮ → Add to Home screen** করলে অ্যাপের মতোই আইকন হয়ে যাবে।
@@ -158,10 +164,11 @@ Settings → `PATCH /api/profile` → `/api/meta` থেকেই বসে (`me
 | oxlint | ✅ 0 warning, 0 error (78 files) |
 | Production + Pages + Vercel build | ✅ ঠিকঠাক (`dist/`, `dist-vercel/`) |
 
-যাচাই করা হয়েছে: লাইভ সাইটের সব ফাইল (HTML, JS, CSS, WASM, favicon) **200 OK**,
-deep link (যেমন `/subjects/4`) ঠিকঠাক খোলে, আর লাইভ bundle-এর MD5 hash
-অবিকল আমার নিজে rebuild করা bundle-এর সাথে মিলছে — মানে যেটা GitHub-এ আছে আর যেটা তুমি
-ব্রাউজারে খুলছ সেটা একই জিনিস।
+যাচাই করা হয়েছে: দুই হোস্টেই HTML, JS chunks, CSS, WASM **সবগুলো 200 OK** (lazy chunk সহ),
+deep link (`/report`, `/exam`, `/analytics`, `/subjects/1`) সরাসরি খোলে, লাইভ bundle-এর MD5
+অবিকল আমার নিজে rebuild করা bundle-এর সাথে মিলছে, আর bundle-এ নতুন feature (Exam Mode,
+Report, Advanced Analytics, Auto Backup) আছে এবং কোনো AI API-র ঠিকানা (`openai`, `gemini`,
+`anthropic`) নেই।
 
 ---
 
@@ -177,25 +184,29 @@ npm run build:pages            # dist/ তৈরি করবে (404.html + .no
 নামে রাখলে প্রতি push-এ নিজে নিজে deploy হবে। (এটা এই token দিয়ে করা যায়নি —
 token-এ `workflow` permission নেই; GitHub web-এ ফাইলটা বানালেই হবে।)
 
-### Vercel-এ deploy (একই অ্যাপ, offline Mode-এ)
+### Vercel-এ deploy (একই অ্যাপ, offline mode-এ)
 
-GitHub Pages-এ অ্যাপ যেমন চলে (in-browser database, server লাগে না), Vercel-এও ঠিক তেমনি চলবে —
-তাই আসল API/Vercel-এর database সেটআপ লাগে না, অ্যাপ নিজেই ব্রাউজারে data রাখে।
+GitHub Pages-এ অ্যাপ যেমন চলে (in-browser database, server লাগে না), Vercel-এও ঠিক তেমনি —
+তাই আলাদা API/database সেটআপ লাগে না, অ্যাপ নিজেই ব্রাউজারে data রাখে।
 
-```bash
-cd ~/study-hub/client
-npm run build:vercel           # dist-vercel/ তৈরি করবে (.env.vercel → VITE_API_MODE=local)
-# Vercel CLI দিয়ে: project root = client/, Output Directory = dist-vercel
-#   (client/vercel.json-এ buildCommand, SPA rewrite আর asset cache header সেট করা আছে)
-```
-
-`client/vercel.json`-এ সব রুট `/index.html`-এ rewrite করা আছে, তাই `/subjects/4`, `/report`,
-`/exam`-এর মতো deep link-ও সরাসরি খুলবে। deploy কমান্ড (token শুধু environment-এ, কখনো repo-তে নয়):
+**কেন deploy করতে হয় repo-র root থেকে (client/ থেকে নয়):** browser-এ চলা backend টা আসলে
+`server/src/**`-এরই কোড (routes, services, repositories, schema.sql), শুধু `express` আর
+`db/connection.js` দুটো browser-version দিয়ে বদলে দেওয়া (`client/src/browser-db/`)। তাই build করতে
+`server/` ফোল্ডারটাও দরকার — `client/` থেকে deploy করলে সেই ফাইলগুলো আপলোড হয় না, build ভেঙে যায়।
 
 ```bash
-cd ~/study-hub/client
-VERCEL_TOKEN=*** npx vercel@latest --prod --yes
+cd ~/study-hub                 # repo root, client/ নয়
+VERCEL_TOKEN=*** npx vercel@latest --prod --yes   # token শুধু environment-এ, কখনো repo/remote-এ নয়
 ```
+
+root-এর `vercel.json`-এ সব সেট করা আছে: `installCommand: npm install --prefix client`,
+`buildCommand: npm run build:vercel --prefix client`, `outputDirectory: client/dist-vercel`,
+সব রুট `/index.html`-এ rewrite, আর `/assets/*`-কে immutable cache header।
+`client/.env.vercel` → `VITE_API_MODE=local` (Pages-এর মতোই), আর root-এর `.vercelignore`
+তোমার `data/` ফোল্ডার (তোমার পড়ার আসল ডেটা) কখনো আপলোড হয় না।
+
+পুরোনো লিংক: https://study-3z7ek92ux-md-abdullah-mullas-projects.vercel.app (alias)
+
 
 ---
 
