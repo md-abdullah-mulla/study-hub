@@ -1,0 +1,28 @@
+# ---------------------------------------------------------------------------
+# Render blueprint — one web service that serves both the API and the web app.
+# Render dashboard → New → Blueprint → pick this repo. Nothing else to configure.
+#
+# NOTE on data: Render's free plan has an ephemeral filesystem, so the SQLite
+# file (and therefore your progress) is reset on every deploy. Two options:
+#   1. attach a paid persistent disk (uncomment the `disk:` block below), or
+#   2. keep using the app locally and treat the live URL as a demo.
+# ---------------------------------------------------------------------------
+services:
+  - type: web
+    name: study-hub
+    runtime: node
+    plan: free
+    buildCommand: cd client && npm ci && npm run build && cd ../server && npm ci
+    startCommand: cd server && node src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_FILE
+        value: /data/study.db
+      # - key: CORS_ORIGIN
+      #   value: https://your-app.onrender.com
+    # disk:
+    #   name: study-data
+    #   mountPath: /data
+    #   sizeGB: 1

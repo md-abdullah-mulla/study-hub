@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+**/smoke/out.mjs
+*.tsbuildinfo
+
+# local database (your personal study data — never commit this)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# local env
+.env
+.env.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
