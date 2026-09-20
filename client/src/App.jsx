@@ -14,6 +14,7 @@ import ImportPage from './pages/ImportPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import MorePage from './pages/MorePage.jsx';
 import ComingSoonPage from './pages/ComingSoonPage.jsx';
+import StudyPage from './pages/StudyPage.jsx';
 import { EmptyState } from './components/ui/index.jsx';
 import { PHASE_INFO } from './components/layout/navItems.js';
 
@@ -38,17 +39,7 @@ export default function App() {
             <Route path="/import" element={<ImportPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/more" element={<MorePage />} />
-            <Route
-              path="/study"
-              element={
-                <ComingSoonPage
-                  phase={2}
-                  title="Study Session & Timer"
-                  description="পড়া শুরু করলে timer চলবে, শেষে duration + confidence save হবে"
-                  points={PHASE_INFO[2].points}
-                />
-              }
-            />
+            <Route path="/study" element={<StudyPage />} />
             <Route
               path="/quiz"
               element={

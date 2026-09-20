@@ -69,4 +69,19 @@ installFetchBridge(backend.handle);
 globalThis.__OFFLINE_BACKEND__ = backend;
 globalThis.__OFFLINE_STORE__ = store;
 
+/**
+ * Boots a SECOND backend over the same storage — i.e. what a page reload does.
+ * The smoke test uses it to prove that saved sessions really come back from
+ * IndexedDB instead of being trusted to stay in memory.
+ */
+globalThis.__OFFLINE_RELOAD__ = async () => {
+  // exactly what src/browser-db/localApi.js does on a page load: read the saved
+  // bytes back out of storage and hand them to sql.js
+  const savedBytes = await storage.get('database');
+  const reloaded = await createBrowserBackend({ SQL, schemaSql, data: savedBytes, storage });
+  installFetchBridge(reloaded.handle);
+  globalThis.__OFFLINE_BACKEND__ = reloaded;
+  return reloaded;
+};
+
 await import('./render-offline.jsx');

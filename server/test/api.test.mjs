@@ -365,3 +365,143 @@ test('dashboard recommendation explains itself with real reasons', async () => {
   assert.ok(rec.subjectId && rec.chapterId);
   assert.ok(typeof rec.score === 'number');
 });
+
+// ---------------------------------------------------------------------------
+// Phase 2 — Study Session Tracker
+// ---------------------------------------------------------------------------
+
+test('starting a session on a topic marks it "studying" but never "completed"', async () => {
+  const microcontroller = await findSubject('Microcontroller');
+  const topic = microcontroller.chapters[0].topics[0];
+  assert.equal(topic.status, 'not_started');
+
+  const started = await post('/api/sessions', { topicId: topic.id });
+  assert.equal(started.status, 201);
+  assert.equal(started.body.endedAt, null);
+  assert.equal(started.body.durationMinutes, 0, 'no time is claimed before the session ends');
+  // the subject/chapter are derived from the topic, so they can never disagree
+  assert.equal(started.body.chapterId, topic.chapterId);
+  assert.equal(started.body.subjectId, microcontroller.id);
+
+  const tree = await get('/api/progress-tree');
+  const after = tree.body.subjects.find((s) => s.name === 'Microcontroller');
+  const topicAfter = after.chapters[0].topics.find((t) => t.id === topic.id);
+  assert.equal(topicAfter.status, 'studying', 'real study moves the topic to studying');
+  assert.equal(after.progress.completed, 0, '...but progress stays 0 until the student says it is done');
+});
+
+test('finishing a session stores the measured duration, confidence and note', async () => {
+  const iot = await findSubject('IoT & IoT Architecture');
+  const topic = iot.chapters[0].topics.find((t) => t.name === 'MQTT');
+
+  const started = await post('/api/sessions', { topicId: topic.id });
+  const finished = await patch(`/api/sessions/${started.body.id}`, {
+    durationMinutes: 45,
+    confidence: 4,
+    topicsCompleted: 1,
+    revisionNeeded: false,
+    note: 'MQTT broker আর topic ঠিকভাবে বুঝেছি',
+  });
+
+  assert.equal(finished.status, 200);
+  assert.equal(finished.body.durationMinutes, 45);
+  assert.equal(finished.body.confidence, 4);
+  assert.equal(finished.body.topicsCompleted, 1);
+  assert.equal(finished.body.revisionNeeded, false);
+  assert.match(finished.body.note, /MQTT broker/);
+  assert.ok(finished.body.endedAt, 'a finished session has an end time');
+
+  // finishing twice must not lose the first values (partial PATCH rule)
+  const renamed = await patch(`/api/sessions/${started.body.id}`, { note: 'note badalano' });
+  assert.equal(renamed.body.durationMinutes, 45);
+  assert.equal(renamed.body.confidence, 4);
+  assert.equal(renamed.body.note, 'note badalano');
+
+  // a session without durationMinutes measures the clock itself (>= 0, never NaN)
+  const quick = await post('/api/sessions', { subjectId: iot.id });
+  const quickDone = await patch(`/api/sessions/${quick.body.id}`, {});
+  assert.equal(quickDone.status, 200);
+  assert.ok(Number.isInteger(quickDone.body.durationMinutes));
+  assert.ok(quickDone.body.durationMinutes >= 0);
+});
+
+test('dashboard study time and streak come from the stored sessions', async () => {
+  const history = await get('/api/sessions');
+  assert.equal(history.status, 200);
+  assert.equal(history.body.summary.totalMinutes, 45, 'only the real 45 minutes are counted');
+  assert.equal(history.body.summary.todayMinutes, 45);
+  assert.equal(history.body.summary.currentStreak, 1, 'studying today starts a streak');
+  assert.equal(history.body.summary.activeDays, 1);
+  const startedAt = history.body.sessions.map((s) => s.startedAt);
+  assert.deepEqual(startedAt, [...startedAt].sort().reverse(), 'newest session comes first');
+  assert.equal(history.body.sessions.filter((s) => s.durationMinutes === 45).length, 1);
+
+  const dashboard = await get('/api/dashboard');
+  assert.equal(dashboard.body.stats.todayStudyMinutes, 45);
+  assert.equal(dashboard.body.stats.totalStudyMinutes, 45);
+  assert.equal(dashboard.body.stats.currentStreak, 1, 'dashboard streak uses the same source');
+
+  const bySubject = history.body.summary.bySubject.find((s) => s.subjectName === 'IoT & IoT Architecture');
+  assert.equal(bySubject.minutes, 45, 'subject-wise study time is tracked');
+});
+
+test('sessions can be filtered by day and an unfinished one is listed as active', async () => {
+  const open = await post('/api/sessions', { subjectId: (await findSubject('DBMS')).id });
+  const active = await get('/api/sessions/active');
+  assert.ok(active.body.some((s) => s.id === open.body.id));
+
+  const dashboard = await get('/api/dashboard');
+  assert.equal(dashboard.body.stats.totalStudyMinutes, 45, 'an open session adds no minutes');
+
+  const today = new Date().toISOString().slice(0, 10);
+  const all = await get('/api/sessions');
+  const inRange = await get(`/api/sessions?from=${today}&to=${today}&limit=5`);
+  assert.equal(inRange.body.sessions.length, all.body.sessions.length, 'every session so far is from today');
+
+  const oldRange = await get('/api/sessions?from=2000-01-01&to=2000-01-02');
+  assert.equal(oldRange.body.sessions.length, 0, 'other days return nothing');
+
+  const removed = await del(`/api/sessions/${open.body.id}`);
+  assert.equal(removed.status, 204);
+  const stillActive = await get('/api/sessions/active');
+  assert.ok(!stillActive.body.some((s) => s.id === open.body.id), 'the deleted session is gone');
+});
+
+test('"revision needed" pulls a completed topic back into the revision queue', async () => {
+  const cn = await findSubject('Computer Network');
+  const topic = cn.chapters[0].topics[0];
+  const completed = await patch(`/api/topics/${topic.id}/status`, { status: 'completed' });
+  assert.equal(completed.body.status, 'completed');
+
+  const session = await post('/api/sessions', { topicId: topic.id });
+  await patch(`/api/sessions/${session.body.id}`, { durationMinutes: 30, revisionNeeded: true });
+
+  const queue = await get('/api/statuses/revision-queue');
+  assert.ok(
+    queue.body.some((item) => item.topicId === topic.id),
+    'the topic must be due for revision right away'
+  );
+
+  const tree = await get('/api/progress-tree');
+  const cnAfter = tree.body.subjects.find((s) => s.name === 'Computer Network');
+  const topicAfter = cnAfter.chapters[0].topics.find((t) => t.id === topic.id);
+  assert.equal(topicAfter.status, 'completed', 'revision debt never un-completes a topic');
+  assert.equal(cnAfter.progress.completed, cn.progress.completed + 1, 'the percentage only counts completion');
+});
+
+test('session validation and 404s are honest errors', async () => {
+  const badConfidence = await patch('/api/sessions/1', { confidence: 9 });
+  assert.equal(badConfidence.status, 400);
+
+  const badDuration = await patch('/api/sessions/1', { durationMinutes: -5 });
+  assert.equal(badDuration.status, 400);
+
+  const tooLong = await patch('/api/sessions/1', { durationMinutes: 5000 });
+  assert.equal(tooLong.status, 400, 'a 5000-minute sitting is refused, not silently stored');
+
+  assert.equal((await get('/api/sessions/999999')).status, 404);
+  assert.equal((await patch('/api/sessions/999999', { durationMinutes: 10 })).status, 404);
+  assert.equal((await del('/api/sessions/999999')).status, 404);
+  assert.equal((await post('/api/sessions', { topicId: 999999 })).status, 404);
+  assert.equal((await post('/api/sessions', { subjectId: 'abc' })).status, 400);
+});

@@ -32,8 +32,14 @@ async function renderAt(path, settle = 1600) {
       </MemoryRouter>
     );
   });
+  // Settle OUTSIDE act(): React 19's act() waits for its own async block, and a
+  // real network request made inside an effect does not resolve while that await
+  // is pending (the in-page sql.js bridge resolves instantly, which is why only
+  // the server-mode smoke ever hit this). The trailing act() flushes the state
+  // updates those requests produce.
+  await wait(settle);
   await act(async () => {
-    await wait(settle);
+    await wait(60);
   });
   return root;
 }
@@ -154,7 +160,44 @@ check('settings explain that data lives in the browser', page.includes('IndexedD
 await click(byText('Backup (JSON)'), 1400);
 check('backup export runs without a server', text().includes('download হয়েছে') || text().includes('study-backup.json'));
 
-// ---- 9. later-phase screens stay honest ---------------------------------
+// ---- 9. Study Session timer works with no server at all -----------------
+await root.unmount();
+root = await renderAt('/study', 1800);
+page = text();
+check('offline study timer opens ready to start', page.includes('পড়া শুরু করো') && page.includes('০ মিনিট'));
+
+await click(byText('পড়া শুরু করো'), 1500);
+check('offline timer starts and shows the running clock', text().includes('এখন পড়ছি'));
+
+const running = await api('/sessions/active');
+check('the session is stored in the in-page database', running.length === 1 && running[0].endedAt === null);
+
+await api(`/sessions/${running[0].id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ durationMinutes: 30, confidence: 5, revisionNeeded: true }),
+});
+await root.unmount();
+root = await renderAt('/study', 1800);
+check('finished session shows its real 30 minutes offline', text().includes('30 মিনিট') && text().includes('revision দরকার'));
+
+const offlineSummary = await api('/sessions');
+check(
+  'study time feeds today + streak with no server',
+  offlineSummary.summary.todayMinutes === 30 && offlineSummary.summary.currentStreak === 1
+);
+
+await globalThis.__OFFLINE_BACKEND__.flush();
+await globalThis.__OFFLINE_RELOAD__();
+const afterReload = await api('/sessions');
+check(
+  'the session comes back after a reload of the in-page database',
+  afterReload.sessions.length === 1 &&
+    afterReload.sessions[0].durationMinutes === 30 &&
+    afterReload.summary.todayMinutes === 30
+);
+
+// ---- 10. later-phase screens stay honest --------------------------------
 await root.unmount();
 root = await renderAt('/ai');
 check('AI screen still says it is a later phase', text().includes('Phase 4') && text().includes('এখনো তৈরি হয়নি'));

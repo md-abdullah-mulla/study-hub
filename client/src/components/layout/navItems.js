@@ -21,7 +21,7 @@ export const NAV_ITEMS = [
   { to: '/', label: 'ড্যাশবোর্ড', en: 'Dashboard', icon: LayoutDashboard, phase: 1, mobile: true },
   { to: '/subjects', label: 'Subject', en: 'Subjects', icon: Library, phase: 1, mobile: true },
   { to: '/chapters', label: 'Chapter & Topic', en: 'Chapters', icon: ListTree, phase: 1, mobile: true },
-  { to: '/study', label: 'Study Session', en: 'Study', icon: BookOpenCheck, phase: 2, mobile: false },
+  { to: '/study', label: 'Study Session', en: 'Study', icon: BookOpenCheck, phase: 1, mobile: true },
   { to: '/revision', label: 'Revision', en: 'Revision', icon: RefreshCw, phase: 2, mobile: false },
   { to: '/quiz', label: 'Quiz', en: 'Quiz', icon: ListChecks, phase: 3, mobile: false },
   { to: '/ai', label: 'AI Assistant', en: 'AI', icon: Sparkles, phase: 4, mobile: false },

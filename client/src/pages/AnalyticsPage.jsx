@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BarChart,
   Bar,
@@ -9,7 +10,7 @@ import {
   Cell,
   CartesianGrid,
 } from 'recharts';
-import { BarChart3, TrendingDown, TrendingUp, Clock } from 'lucide-react';
+import { BarChart3, TrendingDown, TrendingUp, Clock, Timer } from 'lucide-react';
 import { Card, CardHeader, StatCard, EmptyState } from '../components/ui/index.jsx';
 import { Donut } from '../components/ui/ProgressBar.jsx';
 import { useAppData } from '../state/AppDataContext.jsx';
@@ -148,7 +149,7 @@ export default function AnalyticsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Study Time" subtitle="Phase 2-এ Study Session timer যোগ হবে" icon={Clock} />
+          <CardHeader title="Study Time" subtitle="Study Session timer-এ মাপা আসল সময়" icon={Clock} />
           <div className="space-y-3 p-4 sm:p-5">
             <div className="grid grid-cols-2 gap-3">
               <StatCard label="মোট Study Time" value={minutesLabel(studyStats.totalStudyMinutes ?? 0)} />
@@ -157,9 +158,13 @@ export default function AnalyticsPage() {
               <StatCard label="Longest Streak" value={`${studyStats.longestStreak ?? 0} দিন`} />
             </div>
             <p className="muted">
-              Study time এখন ০ কারণ timer এখনো তৈরি হয়নি (Phase 2)। বানানো সংখ্যা দেখানোর চেয়ে খালি রাখা ভালো —
-              সময় শেষ হলে এখানেই daily/weekly graph বসবে।
+              এই সংখ্যাগুলো শুধু Study Session timer থেকে আসে — তুমি যত মিনিট সত্যিই পড়েছ, ঠিক ততটাই যোগ হয়। কোনো
+              হাতে বানানো সময় এখানে ঢোকানোর উপায় নেই।
             </p>
+            <Link className="btn-ghost" to="/study">
+              <Timer className="h-4 w-4" />
+              Study timer চালাও
+            </Link>
           </div>
         </Card>
       </div>

@@ -89,6 +89,14 @@ export const api = {
     regenerate: () => request('/plan/regenerate', { method: 'POST', body: {} }),
   },
 
+  sessions: {
+    list: (params) => request(`/sessions${qs(params)}`),
+    active: () => request('/sessions/active'),
+    start: (data) => request('/sessions', { method: 'POST', body: data }),
+    finish: (id, data) => request(`/sessions/${id}`, { method: 'PATCH', body: data }),
+    remove: (id) => request(`/sessions/${id}`, { method: 'DELETE' }),
+  },
+
   search: (q) => request(`/search${qs({ q })}`),
   importParse: (text) => request('/import/parse', { method: 'POST', body: { text } }),
   importApply: (payload) => request('/import/apply', { method: 'POST', body: payload }),

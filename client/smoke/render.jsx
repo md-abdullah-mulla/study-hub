@@ -49,8 +49,14 @@ async function renderAt(path, settle = 1500) {
       </MemoryRouter>
     );
   });
+  // Settle OUTSIDE act(): React 19's act() waits for its own async block, and a
+  // real network request made inside an effect does not resolve while that await
+  // is pending (the in-page sql.js bridge resolves instantly, which is why only
+  // the server-mode smoke ever hit this). The trailing act() flushes the state
+  // updates those requests produce.
+  await wait(settle);
   await act(async () => {
-    await wait(settle);
+    await wait(60);
   });
   return root;
 }
@@ -105,6 +111,10 @@ async function resetProgressFromSeed() {
   for (const subject of current.subjects) {
     if (subject.name.startsWith('QA ')) await client(`/api/subjects/${subject.id}`, 'DELETE');
   }
+
+  // sessions from an earlier run would skew the study-time numbers
+  const sessions = await client('/api/sessions');
+  for (const session of sessions.sessions) await client(`/api/sessions/${session.id}`, 'DELETE');
 
   // a previous run may have ticked or deleted today's plan items
   const plan = await client('/api/plan');
@@ -253,7 +263,38 @@ await root.unmount();
 root = await renderAt('/analytics', 1800);
 page = text();
 check('analytics shows status, subject bars and study-time block', page.includes('Topic Status') && page.includes('Subject-wise Completion') && page.includes('Study Time'));
-check('analytics explains why study time is zero', page.includes('timer এখনো তৈরি হয়নি'));
+check('analytics explains study time comes from the timer only', page.includes('Study Session timer থেকে আসে'));
+
+// ================================================================ 11. STUDY TIMER (Phase 2)
+await root.unmount();
+root = await renderAt('/study', 1800);
+page = text();
+check('study timer opens with an honest 0-minute day', page.includes('পড়া শুরু করো') && page.includes('০ মিনিট'), page.slice(0, 400));
+check('timer screen warns that time is measured, never invented', page.includes('হাতে বানানো study time কখনো সেভ হয় না'), page.slice(0, 400));
+
+await click(byText('পড়া শুরু করো'), 1500);
+check('starting a session shows the running clock', text().includes('এখন পড়ছি') && text().includes('চলছে'));
+
+const open = await client('/api/sessions/active');
+check('the running session really exists in the database', open.length === 1 && open[0].endedAt === null);
+
+// finish it through the API with a measured 25 minutes, then look at the screen again
+await client(`/api/sessions/${open[0].id}`, 'PATCH', { durationMinutes: 25, confidence: 4, note: 'smoke session' });
+await root.unmount();
+root = await renderAt('/study', 1800);
+check('the finished session shows up with its real minutes', text().includes('25 মিনিট') && text().includes('confidence 4/5'));
+
+const summary = (await client('/api/sessions')).summary;
+check('study summary counts the session only once', summary.totalMinutes === 25 && summary.currentStreak === 1);
+
+await root.unmount();
+root = await renderAt('/analytics', 1800);
+check('analytics now reports the real study time', text().includes('25 মিনিট') && text().includes('1 দিন'));
+
+// clean up so the database goes back to a clean state
+for (const session of (await client('/api/sessions')).sessions) {
+  await client(`/api/sessions/${session.id}`, 'DELETE');
+}
 
 await root.unmount();
 root = await renderAt('/settings');
