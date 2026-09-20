@@ -13,6 +13,7 @@ import { noteRouter } from './noteRoutes.js';
 import { planRouter } from './planRoutes.js';
 import { sessionRouter } from './sessionRoutes.js';
 import { quizRouter, quizResultRouter } from './quizRoutes.js';
+import { studyContentRouter } from './contentRoutes.js';
 import { STATUS_LABELS_BN, IMPORTANCE } from '../domain/constants.js';
 import { ILLUSTRATION_TYPES } from '../services/illustration/promptBuilder.js';
 import { asyncHandler } from '../utils/http.js';
@@ -112,6 +113,7 @@ export function apiRouter({ getUserId }) {
   router.use('/sessions', sessionRouter({ getUserId }));
   router.use('/quizzes', quizRouter({ getUserId }));
   router.use('/quiz-results', quizResultRouter({ getUserId }));
+  router.use('/study-content', studyContentRouter({ getUserId }));
 
   return router;
 }

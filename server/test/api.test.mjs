@@ -944,3 +944,148 @@ test('illustration prompt validation is honest', async () => {
   assert.equal((await post(`/api/topics/${mqtt.id}/illustration-prompt`, { variant: 'two' })).status, 400);
   assert.equal((await post('/api/topics/999999/illustration-prompt', {})).status, 404);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 4 (second feature) — study content generator (no AI API)
+// ---------------------------------------------------------------------------
+
+test('study content kinds are listed with an honest note about the generator', async () => {
+  const kinds = await get('/api/study-content/kinds');
+  assert.equal(kinds.status, 200);
+  assert.equal(kinds.body.kinds.length, 9);
+  assert.deepEqual(
+    kinds.body.kinds.map((kind) => kind.value),
+    [
+      'easy_definition', 'explanation', 'important_points', 'example', 'exam_answer',
+      'possible_questions', 'mcq', 'viva', 'revision_summary',
+    ]
+  );
+  assert.match(kinds.body.generator, /কোনো AI API নেই/);
+  assert.ok(kinds.body.topicsWithHandwrittenKnowledge >= 15);
+});
+
+test('a topic with hand-written knowledge gets real Bangla content', async () => {
+  const iot = await findSubject('IoT & IoT Architecture');
+  const mqtt = iot.chapters[0].topics.find((t) => t.name === 'MQTT');
+
+  const generated = await post(`/api/study-content/topic/${mqtt.id}/generate`, {});
+  assert.equal(generated.status, 200);
+  assert.equal(generated.body.generator, 'pattern-library', 'hand-written knowledge was used');
+  assert.equal(generated.body.draft, false);
+  assert.equal(generated.body.sections.length, 9);
+  assert.deepEqual(generated.body.matchedIds, ['mqtt']);
+
+  const body = Object.fromEntries(generated.body.sections.map((s) => [s.kind, s.body]));
+  // Bangla text, not machine-translated English
+  assert.match(body.easy_definition, /হালকা \(lightweight\) messaging protocol/);
+  assert.match(body.easy_definition, /Publisher/);
+  assert.match(body.important_points, /• /, 'points come as a bullet list');
+  assert.match(body.exam_answer, /Publisher, Broker ও Subscriber/);
+  assert.match(body.viva, /উত্তর:/);
+  assert.match(body.revision_summary, /দ্রুত রিভিশন/);
+
+  // every section is present and non-empty, and none of them is a lone sentence
+  for (const section of generated.body.sections) {
+    assert.ok(section.body.trim().length > 40, `${section.kind} must carry real text`);
+    assert.ok(section.label, `${section.kind} has a Bangla label`);
+  }
+});
+
+test('generated MCQs have exactly one correct option, and it is really correct', async () => {
+  const iot = await findSubject('IoT & IoT Architecture');
+  const mqtt = iot.chapters[0].topics.find((t) => t.name === 'MQTT');
+  const generated = await post(`/api/study-content/topic/${mqtt.id}/generate`, { kinds: ['mcq'] });
+  const body = generated.body.sections[0].body;
+
+  const blocks = body.split('\n\n');
+  assert.ok(blocks.length >= 2, 'more than one question is produced');
+  for (const block of blocks) {
+    const lines = block.split('\n');
+    const options = lines.filter((line) => /^[১২৩৪]\. /.test(line));
+    const answerLine = lines.find((line) => line.startsWith('উত্তর: '));
+    assert.equal(options.length, 4, 'four options per question');
+    assert.ok(answerLine, 'the answer is written down (the student must be able to check it)');
+    const answer = answerLine.replace('উত্তর: ', '').trim();
+    assert.equal(new Set(options).size, 4, 'options are distinct');
+    assert.ok(
+      options.some((option) => option.replace(/^[১২৩৪]\. /, '').trim() === answer),
+      'the stated answer is one of the options'
+    );
+  }
+
+  // the distractors belong to other concepts, so they must not be parts of MQTT
+  assert.ok(body.includes('MQTT Publisher'));
+  assert.ok(!body.includes('CoAP Client\nউত্তর: CoAP Client'), 'the answer is never a distractor');
+});
+
+test('content can be generated, saved, edited, turned into a note and deleted', async () => {
+  const iot = await findSubject('IoT & IoT Architecture');
+  const mqtt = iot.chapters[0].topics.find((t) => t.name === 'MQTT');
+
+  const saved = await post(`/api/study-content/topic/${mqtt.id}/save`, {});
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.length, 9, 'saving without sections stores the whole generated set');
+  const section = saved.body.find((row) => row.kind === 'easy_definition');
+  assert.equal(section.model, 'pattern-library', 'the row records that no AI wrote it');
+
+  // saving again replaces instead of piling up
+  await post(`/api/study-content/topic/${mqtt.id}/save`, { kinds: ['easy_definition'] });
+  const afterSecondSave = await get(`/api/study-content/topic/${mqtt.id}`);
+  assert.equal(afterSecondSave.body.filter((row) => row.kind === 'easy_definition').length, 1);
+
+  const edited = await patch(`/api/study-content/${section.id}`, { body: 'আমার নিজের লেখা সংজ্ঞা' });
+  assert.equal(edited.status, 200);
+  assert.equal(edited.body.body, 'আমার নিজের লেখা সংজ্ঞা');
+  assert.equal(edited.body.title, section.title, 'editing the body keeps the title');
+
+  const empty = await patch(`/api/study-content/${section.id}`, { body: '   ' });
+  assert.equal(empty.status, 400, 'an empty section is refused');
+
+  // the student's own notes stay separate from generated content
+  const note = await post(`/api/study-content/${section.id}/to-note`, {});
+  assert.equal(note.status, 201);
+  assert.equal(note.body.source, 'ai', 'it lands in the AI-notes block, not among personal notes');
+  const personal = await get(`/api/notes?topicId=${mqtt.id}&source=personal`);
+  const aiNotes = await get(`/api/notes?topicId=${mqtt.id}&source=ai`);
+  assert.ok(!personal.body.some((row) => row.body === 'আমার নিজের লেখা সংজ্ঞা'), 'AI notes stay out of the personal block');
+  assert.ok(aiNotes.body.some((row) => row.body === 'আমার নিজের লেখা সংজ্ঞা'), 'it is filed under AI notes instead');
+
+  const stats = await get('/api/study-content/stats');
+  assert.equal(stats.body.savedSections >= 9, true);
+  assert.equal(stats.body.topicsWithContent >= 1, true);
+
+  const removed = await del(`/api/study-content/${section.id}`);
+  assert.equal(removed.status, 204);
+  const left = await get(`/api/study-content/topic/${mqtt.id}`);
+  assert.ok(!left.body.some((row) => row.id === section.id));
+
+  assert.equal((await patch('/api/study-content/999999', { body: 'x' })).status, 404);
+  assert.equal((await del('/api/study-content/999999')).status, 404);
+  assert.equal((await post('/api/study-content/999999/to-note', {})).status, 404);
+});
+
+test('a topic without hand-written knowledge gets an honest draft, not fake facts', async () => {
+  const subject = await post('/api/subjects', { name: 'Electrical Circuits' });
+  const chapter = await post('/api/chapters', { subjectId: subject.body.id, name: 'Basic Electricity' });
+  const topic = await post('/api/topics', {
+    chapterId: chapter.body.id,
+    name: 'Ohms Law',
+    description: 'Voltage, current, resistance',
+  });
+
+  const generated = await post(`/api/study-content/topic/${topic.body.id}/generate`, {});
+  assert.equal(generated.body.generator, 'pattern-draft');
+  assert.equal(generated.body.draft, true, 'the app says it is a draft');
+
+  const content = Object.fromEntries(generated.body.sections.map((s) => [s.kind, s.body]));
+  assert.ok(content.easy_definition.includes('হাতে লেখা তথ্য নেই'), 'draft sections say so plainly');
+  assert.ok(content.important_points.includes('Voltage'), 'the student description is used');
+  assert.match(content.mcq, /যথেষ্ট তথ্য ডেটাবেজে নেই/, 'MCQ refuses to invent questions');
+  assert.match(content.exam_answer, /বই থেকে মিলিয়ে/, 'the student is told where to get the facts');
+
+  // a validation error and a 404 stay honest
+  assert.equal((await post(`/api/study-content/topic/${topic.body.id}/generate`, { kinds: ['nonsense'] })).body.sections.length, 0);
+  assert.equal((await post('/api/study-content/topic/999999/generate', {})).status, 404);
+
+  await del(`/api/subjects/${subject.body.id}`);
+});

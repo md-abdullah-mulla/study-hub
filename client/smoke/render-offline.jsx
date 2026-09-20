@@ -299,10 +299,51 @@ check(
   (globalThis.__CLIPBOARD__.at(-1) ?? '').includes('AVOID') && text().includes('Prompt copied successfully!')
 );
 
-// ---- 12. later-phase screens stay honest --------------------------------
+// ---- 12. study content works with no server and no AI API ----------------
 await root.unmount();
-root = await renderAt('/ai');
-check('AI screen still says it is a later phase', text().includes('Phase 4') && text().includes('এখনো তৈরি হয়নি'));
+root = await renderAt('/subjects/2/chapters/2', 1900);
+check('offline topic rows link to Study Content too', text().includes('Study Content'));
+
+const offlineContentLink = [...document.querySelectorAll('a[aria-label*="Study Content"]')][0];
+const offlineTopicId = Number((offlineContentLink?.getAttribute('href') ?? '').match(/topicId=(\d+)/)?.[1]);
+await click(offlineContentLink, 2000);
+check(
+  'offline Study Content opens the assistant with the topic pre-selected',
+  text().includes('কোনো AI API নেই') && text().includes('Content তৈরি করো'),
+  text().slice(0, 300)
+);
+
+await click(byText('Content তৈরি করো'), 2400);
+const offlineContent = [...document.querySelectorAll('pre')].map((el) => el.textContent).join('\n');
+check(
+  'offline content is Bangla, topic-specific and mentions no API key',
+  offlineContent.length > 60 && /[\u0980-\u09FF]/.test(offlineContent) && !/api key/i.test(offlineContent),
+  offlineContent.slice(0, 120)
+);
+
+await click(byText('সব save করো'), 2400);
+const offlineSaved = await api(`/study-content/topic/${offlineTopicId}`);
+check(
+  'offline saving stores the sections as pattern-generated content',
+  offlineSaved.length >= 5 && offlineSaved.every((row) => row.model.startsWith('pattern')),
+  JSON.stringify(offlineSaved.slice(0, 2))
+);
+
+await globalThis.__OFFLINE_BACKEND__.flush();
+await globalThis.__OFFLINE_RELOAD__();
+const afterReloadContent = await api(`/study-content/topic/${offlineTopicId}`);
+check(
+  'generated content survives a reload of the in-page database',
+  afterReloadContent.length === offlineSaved.length && afterReloadContent.some((row) => row.kind === 'easy_definition')
+);
+
+const offlineKinds = await api('/study-content/kinds');
+check(
+  'offline API also lists the nine sections honestly',
+  offlineKinds.kinds.length === 9 && offlineKinds.generator.includes('কোনো AI API নেই')
+);
+
+for (const row of afterReloadContent) await fetch(`/api/study-content/${row.id}`, { method: 'DELETE' });
 
 await root.unmount();
 

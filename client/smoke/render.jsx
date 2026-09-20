@@ -465,6 +465,66 @@ check(
 );
 
 await root.unmount();
+root = await renderAt(`/subjects/${cn.id}/chapters/${quizChapter.id}`, 1600);
+
+// ================================================================ 14. STUDY CONTENT (Phase 4, no AI API)
+check('every topic row links to Study Content', text().includes('Study Content'));
+check('the quick content shortcut sits on each topic row', document.querySelectorAll('a[aria-label*="Study Content"]').length > 0);
+
+const contentLink = [...document.querySelectorAll('a[aria-label*="Study Content"]')][0];
+await click(contentLink, 2000);
+page = text();
+check(
+  'Study Content opens the AI Assistant screen with the topic already picked',
+  page.includes('Study Content') || page.includes('Content তৈরি করো'),
+  page.slice(0, 300)
+);
+check('the screen says plainly that no AI API is used', page.includes('কোনো AI API নেই'), page.slice(0, 400));
+
+await click(byText('Content তৈরি করো'), 2200);
+page = text();
+check(
+  'generated content lists all nine sections',
+  ['সহজ সংজ্ঞা', 'ব্যাখ্যা', 'গুরুত্বপূর্ণ পয়েন্ট', 'উদাহরণ', 'পরীক্ষার সংক্ষিপ্ত উত্তর', 'সম্ভাব্য প্রশ্ন', 'MCQ', 'Viva প্রশ্ন', 'রিভিশন সামারি'].every(
+    (label) => page.includes(label)
+  ),
+  page.slice(0, 400)
+);
+const firstBody = [...document.querySelectorAll('pre')].map((el) => el.textContent).join('\n');
+check('the content is real Bangla text for this topic', firstBody.length > 60 && /[\u0980-\u09FF]/.test(firstBody), firstBody.slice(0, 120));
+
+await click(byText('সব save করো'), 2500);
+const savedApi = await client(`/api/study-content/topic/${mcqTopic.id}`);
+check('saving stores every section, labelled as pattern-generated', savedApi.length >= 9 && savedApi.every((row) => row.model.startsWith('pattern')), JSON.stringify(savedApi.slice(0, 2)));
+check('saved content is never marked as an AI model', savedApi.every((row) => !/gpt|gemini|claude/i.test(row.model ?? '')));
+
+// edit one section and make sure the edit is what gets stored
+await click(byText('Edit'), 700);
+const contentEditor = [...document.querySelectorAll('textarea')].at(-1);
+check('a generated section can be edited', Boolean(contentEditor));
+if (contentEditor) await type(contentEditor, 'SMOKE-QA: আমার নিজের লেখা সংজ্ঞা');
+await click(byText('Save'), 2000);
+const editedRow = (await client(`/api/study-content/topic/${mcqTopic.id}`)).find((row) => row.kind === 'easy_definition');
+check('the edited text is what is saved', editedRow?.body.includes('SMOKE-QA'), editedRow?.body?.slice(0, 80));
+
+// personal notes must stay separate from generated content
+await client(`/api/study-content/${editedRow?.id}/to-note`, 'POST', {});
+const personalNotes = await client(`/api/notes?topicId=${mcqTopic.id}&source=personal`);
+const aiNotes = await client(`/api/notes?topicId=${mcqTopic.id}&source=ai`);
+check('generated content copies into AI notes, not into personal notes', aiNotes.some((row) => row.body.includes('SMOKE-QA')) && !personalNotes.some((row) => row.body.includes('SMOKE-QA')));
+
+const kindsApi = await client('/api/study-content/kinds');
+check(
+  'the API describes the generator honestly',
+  kindsApi.kinds.length === 9 && kindsApi.generator.includes('কোনো AI API নেই'),
+  kindsApi.generator
+);
+
+await client(`/api/study-content/${editedRow?.id}`, 'DELETE');
+const afterDelete = await client(`/api/study-content/topic/${mcqTopic.id}`);
+check('deleting a section removes it', !afterDelete.some((row) => row.id === editedRow?.id));
+
+await root.unmount();
 root = await renderAt('/quiz', 1200); // leave the app on a normal page
 
 await root.unmount();

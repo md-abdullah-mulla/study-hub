@@ -13,17 +13,18 @@ import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import ImportPage from './pages/ImportPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import MorePage from './pages/MorePage.jsx';
-import ComingSoonPage from './pages/ComingSoonPage.jsx';
 import StudyPage from './pages/StudyPage.jsx';
 import QuizPage from './pages/QuizPage.jsx';
 import QuizDetailPage from './pages/QuizDetailPage.jsx';
 import QuizResultPage from './pages/QuizResultPage.jsx';
+import AiAssistantPage from './pages/AiAssistantPage.jsx';
 import { EmptyState } from './components/ui/index.jsx';
-import { PHASE_INFO } from './components/layout/navItems.js';
 
 /**
- * Routes. Phase-1 screens are real; later-phase screens exist as honest
- * placeholders so navigation never dead-ends (spec §33).
+ * Routes. Dashboard, subjects/chapters/topics, study timer, analytics, quiz,
+ * illustration prompts and the AI-assistant screen are all real; the exam-mode
+ * screen still opens an honest "Phase" placeholder so navigation never
+ * dead-ends (spec §33).
  */
 export default function App() {
   return (
@@ -46,17 +47,7 @@ export default function App() {
             <Route path="/quiz" element={<QuizPage />} />
             <Route path="/quiz/results/:resultId" element={<QuizResultPage />} />
             <Route path="/quiz/:quizId" element={<QuizDetailPage />} />
-            <Route
-              path="/ai"
-              element={
-                <ComingSoonPage
-                  phase={4}
-                  title="AI Study Assistant"
-                  description="সহজ বাংলায় explanation, note, MCQ ও viva question"
-                  points={PHASE_INFO[4].points}
-                />
-              }
-            />
+            <Route path="/ai" element={<AiAssistantPage />} />
             <Route
               path="*"
               element={

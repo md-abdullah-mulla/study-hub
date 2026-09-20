@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ChevronDown, Pencil, Trash2, RotateCcw, AlertCircle, Image } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronDown, Pencil, Trash2, RotateCcw, AlertCircle, Image, Sparkles } from 'lucide-react';
 import { TopicStatusPicker, TopicStatusBadge } from './TopicStatusPicker.jsx';
 import { TopicNotes } from './TopicNotes.jsx';
 import { Modal, Button, ConfirmDialog } from '../ui/index.jsx';
@@ -155,6 +156,16 @@ export function TopicRow({ topic, subject, chapter, onChanged, onDeleted, defaul
             <Image className="h-3.5 w-3.5" />
             Create Illustration
           </button>
+          {/* Opens the AI Assistant screen with this topic already selected —
+              the content generator itself needs no API key (Phase 4). */}
+          <Link
+            to={`/ai?topicId=${topic.id}`}
+            className="hidden items-center gap-1 rounded-lg border border-ink-200 px-2 py-1 text-xs font-medium text-ink-600 hover:bg-brand-50 hover:text-brand-700 sm:inline-flex"
+            aria-label={`${topic.name} — ✨ Study Content`}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Study Content
+          </Link>
           <TopicStatusPicker value={topic.status} onChange={changeStatus} disabled={busy} />
           <button
             onClick={() => setIllustrationOpen(true)}
@@ -164,6 +175,14 @@ export function TopicRow({ topic, subject, chapter, onChanged, onDeleted, defaul
           >
             <Image className="h-3.5 w-3.5" />
           </button>
+          <Link
+            to={`/ai?topicId=${topic.id}`}
+            className="rounded-lg p-1.5 text-ink-400 hover:bg-brand-50 hover:text-brand-600 sm:hidden"
+            aria-label={`${topic.name} এর study content তৈরি করো`}
+            title="✨ Study Content"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+          </Link>
           <button
             onClick={() => {
               setForm({

@@ -94,6 +94,18 @@ export const api = {
 
   analytics: () => request('/analytics'),
 
+  studyContent: {
+    all: (limit) => request(`/study-content${qs({ limit })}`),
+    kinds: () => request('/study-content/kinds'),
+    stats: () => request('/study-content/stats'),
+    forTopic: (topicId) => request(`/study-content/topic/${topicId}`),
+    generate: (topicId, kinds) => request(`/study-content/topic/${topicId}/generate`, { method: 'POST', body: { kinds } }),
+    save: (topicId, sections) => request(`/study-content/topic/${topicId}/save`, { method: 'POST', body: { sections } }),
+    update: (id, data) => request(`/study-content/${id}`, { method: 'PATCH', body: data }),
+    remove: (id) => request(`/study-content/${id}`, { method: 'DELETE' }),
+    toNote: (id) => request(`/study-content/${id}/to-note`, { method: 'POST', body: {} }),
+  },
+
   quizzes: {
     list: () => request('/quizzes'),
     get: (id, { withAnswers = false } = {}) => request(`/quizzes/${id}${withAnswers ? '?answers=1' : ''}`),
