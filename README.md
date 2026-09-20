@@ -270,9 +270,9 @@ table, API আর UI-এর জায়গা আগে থেকেই রা�
 | `cd client && npm run smoke` | আসল app jsdom-এ render করে ১৩২টা interaction চালায় (status toggle, note, plan tick, quiz, illustration, Study Content, Exam Mode, analytics, report, backup) — **আগে `cd server && npm start` চালু থাকতে হবে** | ✅ 132/132 |
 | `cd client && npm run test:browser` | ব্রাউজার-mode backend: seed, progress maths, exam clock, CRUD, reload-এর পর data ফিরে আসা | ✅ 12/12 |
 | `cd client && npm run smoke:offline` | **server ছাড়া** পুরো UI (jsdom + sql.js) — live app যা করে ঠিক তাই | ✅ 63/63 |
-| `node tools/browser-check.mjs <url>` | **আসল Chromium-এ deployed app**: প্রতিটা screen, dashboard → topic → Exam Mode → analytics → PDF → backup, ফোন layout (Playwright লাগে, app-এর dependency নয়) | ✅ 38/38 |
-| `node tools/pwa-check.mjs <url>` | **App version**: manifest/installability, আইকন, service worker, ইন্টারনেট বন্ধ করে পুরো অ্যাপ + deep link + data save | ✅ 13/13 |
-| `node tools/desktop-check.mjs 9222` | **ডেস্কটপ অ্যাপ** (আসল Electron window): app:// address, preload bridge, ১২টা screen, শূন্য network request, data reload-এর পরও থাকে | ✅ 23/23 (source + AppImage) |
+| `node tools/browser-check.mjs <url>` | **আসল Chromium-এ deployed app**: প্রতিটা screen, dashboard → topic → Exam Mode → analytics → PDF → backup, deep link, ফোন layout (Playwright লাগে, app-এর dependency নয়) | ✅ 39/39 (Vercel + Pages) |
+| `node tools/pwa-check.mjs <url>` | **App version**: manifest/installability, আইকন, service worker, ইন্টারনেট বন্ধ করে পুরো অ্যাপ + deep link + data save | ✅ 13/13 (Vercel + Pages) |
+| `node tools/desktop-check.mjs 9222` | **ডেস্কটপ অ্যাপ** (আসল Electron window): app:// address, preload bridge, ১২টা screen, **শূন্য network request**, data reload-এর পরও থাকে | ✅ 23/23 (source + packaged AppImage) |
 | `cd client && npm run lint` | oxlint (React hooks rules) | ✅ 0 warning |
 | `cd client && npm run build` | production build | ✅ |
 

@@ -200,9 +200,9 @@ topic-এর বাইরের প্রশ্ন কখনো আসে না
 | Browser-mode backend test (sql.js) | ✅ 12/12 |
 | **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 63/63 |
 | Server-mode full UI smoke (timer + analytics + quiz + illustration + study content + exam + report + backup সহ) | ✅ 132/132 |
-| **App (PWA) check — আসল Chrome-এ installed app: manifest, আইকন, service worker, internet বন্ধ করে অ্যাপ + deep link + data save** | ✅ 13/13 |
-| **Desktop app check — আসল Electron window: app://, preload bridge, ১২টা screen, ০ network request, data reload-এর পরও থাকে** | ✅ 23/23 (source + AppImage) |
-| **Real-browser check (Chromium-এ deployed app)** | ✅ 38/38 (Vercel + Pages) |
+| **App (PWA) check — আসল Chrome-এ installed app: manifest, আইকন, service worker, internet বন্ধ করে অ্যাপ + deep link + data save** | ✅ 13/13 (Vercel + Pages) |
+| **Desktop app check — আসল Electron window: app://, preload bridge, ১২টা screen, ০ network request, data reload-এর পরও থাকে** | ✅ 23/23 (source + packaged AppImage) |
+| **Real-browser check (Chromium-এ deployed app)** | ✅ 39/39 (Vercel + Pages) |
 | ৭৭ topic-এর content mapping sweep (cross-subject bleed) | ✅ 0 bleed, 0 draft |
 | oxlint | ✅ 0 warning, 0 error (80 files) |
 | Production + Pages + Vercel build | ✅ ঠিকঠাক (`dist/`, `dist-vercel/`) |
@@ -279,6 +279,9 @@ root-এর `vercel.json`-এ সব সেট করা আছে: `installComm
 ---
 
 ## 📱 App version (PWA) আর 🖥️ Desktop app — একই অ্যাপ, তিন জায়গায়
+
+> এই ধাপের পূর্ণ রিপোর্ট (ফাইল, feature, dependency, build, deploy, সীমাবদ্ধতা):
+> **`docs/app-desktop-report-bn.md`** · ডেস্কটপ ইনস্টলার: **github.com/md-abdullah-mulla/study-hub/releases**
 
 তিনটাই **একই কোড**: React UI + পুরো backend + SQLite (WebAssembly-তে) — তাই কোথাও সার্ভার
 বা আলাদা database লাগে না।
