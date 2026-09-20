@@ -7,7 +7,7 @@
 | ওয়েবসাইট (Vercel) | **https://study-hub-virid.vercel.app/** |
 | ওয়েবসাইট (GitHub Pages) | **https://md-abdullah-mulla.github.io/study-hub/** |
 | **App version** | ওয়েবসাইট খুলে **Settings → App হিসেবে ইনস্টল করো** (অ্যাপ আইকন হোম স্ক্রিনে/Start menu-তে) |
-| **Desktop app** | GitHub → **Releases** (`Study Hub-1.0.0.AppImage`, `study-hub-desktop_1.0.0_amd64.deb`) — বিস্তারিত `docs/desktop-app-bn.md` |
+| **Desktop app** | **[⬇ AppImage](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0.AppImage)** (ইনস্টল ছাড়াই) · **[⬇ .deb](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/study-hub-desktop_1.0.0_amd64.deb)** (উবুন্টু/ডেবিয়ান) — বিস্তারিত `docs/desktop-app-bn.md` |
 
 All three run the whole backend (SQLite compiled to WebAssembly) inside the app, so nothing needs a
 server — and everything keeps working offline. The installed app and the desktop app ship the fonts

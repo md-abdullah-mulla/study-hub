@@ -8,12 +8,14 @@
 
 ## ১. আপনার জন্য কোন ফাইলটা
 
-| আপনি যা চান | ফাইল | কোথায় |
+| আপনি যা চান | ফাইল | ডাউনলোড |
 |---|---|---|
-| উবুন্টু / ডেবিয়ান / লিনাক্স মিন্ট | `study-hub-desktop_1.0.0_amd64.deb` | GitHub → Releases |
-| যেকোনো লিনাক্স (ডাবল-ক্লিক করলেই চলে) | `Study Hub-1.0.0.AppImage` | GitHub → Releases |
-| উইন্ডোজ | `Study Hub Setup 1.0.0.exe` | নিজে বানাতে হবে (নিচে ধাপ ৪) — উইন্ডোজ মেশিনে |
+| উবুন্টু / ডেবিয়ান / লিনাক্স মিন্ট | `study-hub-desktop_1.0.0_amd64.deb` (৭৫ MB) | **[⬇ download](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/study-hub-desktop_1.0.0_amd64.deb)** |
+| যেকোনো লিনাক্স (ইনস্টল ছাড়াই চলে) | `Study Hub-1.0.0.AppImage` (১০৪ MB) | **[⬇ download](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0.AppImage)** |
+| উইন্ডোজ | `Study Hub Setup 1.0.0.exe` | নিজে বানাতে হবে (ধাপ ৪) — উইন্ডোজ মেশিনে |
 | ম্যাক | `Study Hub-1.0.0.dmg` | নিজে বানাতে হবে — ম্যাক মেশিনে |
+
+সব ফাইল একসাথে: **https://github.com/md-abdullah-mulla/study-hub/releases**
 
 লিনাক্সে ইনস্টল:
 

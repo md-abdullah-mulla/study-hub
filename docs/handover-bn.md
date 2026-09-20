@@ -7,7 +7,7 @@
 | **Vercel** | **https://study-hub-virid.vercel.app/** | মূল ডোমেইনে (`/`), `/report`, `/exam`, `/analytics` deep link সরাসরি খোলে |
 | **GitHub Pages** | **https://md-abdullah-mulla.github.io/study-hub/** | `/study-hub/` path-এ, SPA fallback (404.html) দিয়ে deep link খোলে |
 | **📱 App version** | ওয়েবসাইট → Settings → “App হিসেবে ইনস্টল করো” | হোম স্ক্রিনে/Start menu-তে আইকন, ইন্টারনেট ছাড়াও চলে |
-| **🖥️ Desktop app** | GitHub → **Releases** (`.AppImage` / `.deb`) | পিসিতে আলাদা অ্যাপ, ব্রাউজার/সার্ভার/ইন্টারনেট কিছুই লাগে না |
+| **🖥️ Desktop app** | **https://github.com/md-abdullah-mulla/study-hub/releases** — AppImage (ইনস্টল ছাড়াই) / .deb | পিসিতে আলাদা অ্যাপ, ব্রাউজার/সার্ভার/ইন্টারনেট কিছুই লাগে না |
 
 দুই জায়গায় একই অ্যাপ — data ব্রাউজারের ভিতরেই (SQLite → WebAssembly) থাকে, তাই কোনো
 সার্ভার বা ডেটাবেস হোস্টিং লাগে না, আর ইন্টারনেট ছাড়াও চলে।
