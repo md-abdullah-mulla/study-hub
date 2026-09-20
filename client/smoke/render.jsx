@@ -531,6 +531,29 @@ await root.unmount();
 root = await renderAt('/notes', 1400);
 check('notes page lists the personal note written earlier', text().includes('QA note') || text().includes('আমার নোট'));
 
+// Task-1 follow-up: content must never be borrowed from another subject.
+// (The reported bug: "Architecture concepts" got IoT-layer text, "Interrupt
+// vector table" got DBMS text, and MCQ options came from every subject.)
+const shapeTree = await client('/api/progress-tree');
+const mcuSubject = shapeTree.subjects.find((entry) => entry.name === 'Microcontroller');
+const mcuTopic = mcuSubject.chapters.flatMap((chapter) => chapter.topics).find((topic) => topic.name === 'Architecture concepts');
+const mcuContent = await client(`/api/study-content/topic/${mcuTopic.id}/generate`, 'POST', {});
+check(
+  'a Microcontroller topic takes its content from the Microcontroller family',
+  mcuContent.matchedIds.includes('mcu-architecture') && mcuContent.draft === false,
+  JSON.stringify(mcuContent.matchedIds)
+);
+const mcuWhole = mcuContent.sections.map((section) => section.body).join('\n');
+check(
+  'no other subject\'s text leaks into it (no IoT layers, no DBMS)',
+  !/MQTT|CoAP|IoT layer|Foreign key|Stored procedure/i.test(mcuWhole),
+  mcuWhole.slice(0, 160)
+);
+check(
+  'its MCQ options stay inside the Microcontroller domain',
+  !/MQTT|CoAP|Foreign key|Stored procedure/i.test(mcuContent.sections.find((section) => section.kind === 'mcq').body ?? '')
+);
+
 // ================================================================ 16. ADVANCED ANALYTICS (Phase 5)
 await root.unmount();
 root = await renderAt('/analytics', 2600);
@@ -544,6 +567,19 @@ check('the report explains what the data says (insight sentences)', page.include
 check('weak/strong topic blocks are honest when nothing was answered', page.includes('দুর্বল topic') && page.includes('শক্ত topic'));
 check('subject-wise performance lists every subject', page.includes('Subject-wise performance') && page.includes('Computer Network'));
 check('the analytics page offers the PDF export', page.includes('Export Report as PDF'));
+// the rate is only shown once something was really answered; otherwise the card
+// says so plainly instead of printing a meaningless "0 % wrong"
+const analyticsLabels = ['Exam সেরা', 'Exam সর্বনিম্ন'];
+check(
+  'analytics show highest AND lowest exam score',
+  analyticsLabels.every((label) => page.includes(label)),
+  JSON.stringify(Object.fromEntries(analyticsLabels.map((label) => [label, page.includes(label)])))
+);
+check(
+  'answer rates are shown for real answers, never faked when nothing was answered',
+  (page.includes('correct rate') && page.includes('wrong rate')) || page.includes('এখনো উত্তর দাওনি'),
+  page.slice(0, 200)
+);
 
 const advancedApi = await client('/api/analytics/advanced');
 check(
@@ -586,6 +622,11 @@ check(
   page.slice(0, 500)
 );
 check('the report is a real table document, not a screenshot', document.querySelectorAll('.print-area table').length >= 4);
+check(
+  'the report covers topic-wise progress as well',
+  page.includes('Topic progress') && (page.includes('এখনো কোনো topic শুরু করা হয়নি') || document.querySelectorAll('.print-area tbody tr').length > 4),
+  page.slice(0, 400)
+);
 // jsdom does not load the stylesheet, so the print contract is checked by class:
 // the toolbar is marked .no-print and the report body .print-area — those are
 // exactly the hooks the @media print rules in index.css use.
@@ -640,8 +681,20 @@ const availability = await client(`/api/exams/availability?topicId=${examTopic.i
 check('availability counts the questions of one topic', availability.topicsInScope === 1, JSON.stringify(availability));
 
 const exam = await client('/api/exams', 'POST', { topicId: examTopic.id, questionCount: 3, durationMinutes: 5 });
-check('an exam is created from one topic only', exam.questions.length === 3 && exam.scopeLabel.includes(examTopic.name), exam.scopeLabel);
+check(
+  'an exam is created from one topic only',
+  exam.questions.length === Math.min(3, availability.generated) &&
+    exam.questions.length > 0 &&
+    exam.questions.every((question) => question.topicId === examTopic.id) &&
+    exam.scopeLabel.includes(examTopic.name),
+  `${exam.questions.length} questions | ${exam.scopeLabel}`
+);
 check('the exam never sends the correct answers to the browser', exam.questions.every((question) => !('answer' in question)));
+check(
+  'the exam sends an explicit deadline, so a refresh cannot reset the timer',
+  Boolean(exam.endsAt) && new Date(exam.endsAt) - new Date(exam.startedAt) === 5 * 60 * 1000,
+  `endsAt=${exam.endsAt}`
+);
 
 await root.unmount();
 root = await renderAt('/exam', 1800);

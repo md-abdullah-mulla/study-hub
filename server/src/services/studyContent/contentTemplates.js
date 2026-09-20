@@ -1,5 +1,5 @@
 import { BANGLA_CONTENT } from './banglaContent.js';
-import { CONCEPT_ENTRIES } from '../illustration/conceptLibrary.js';
+import { CONCEPT_ENTRIES, FAMILY_DISTRACTORS } from '../illustration/conceptLibrary.js';
 
 /**
  * Turns a topic profile (see illustration/topicAnalyzer.js) into study content.
@@ -13,6 +13,9 @@ import { CONCEPT_ENTRIES } from '../illustration/conceptLibrary.js';
  *  - MCQs are built so that exactly one option is correct (the correct option is
  *    a real part of this concept, the distractors belong to other concepts), and
  *    the answer is marked clearly.
+ *  - No option may come from another subject: every distractor is taken from the
+ *    topic's OWN subject family (see FAMILY_DISTRACTORS), so a Microcontroller
+ *    question can never offer "CoAP Client" or a DBMS question "MQTT Broker".
  *  - When a topic has no hand-written knowledge, the section is generated as a
  *    *draft skeleton* and says so — it never pretends to be finished content.
  */
@@ -132,15 +135,11 @@ function buildMcq(profile, topic, knowledge, draft) {
     .filter(Boolean);
   if (draft || ownParts.length < 2) return null;
 
-  // Distractors are the short part-names of OTHER concepts ("MQTT Broker",
-  // "Switch", "CPU"...) — plausible as options, and never part of this topic,
-  // so exactly one answer can be correct.
-  const otherParts = [];
-  for (const entry of CONCEPT_ENTRIES) {
-    if ((profile.matchedIds ?? []).includes(entry.id)) continue;
-    for (const part of entry.components ?? []) otherParts.push(shortLabel(part));
-  }
-  const distractors = [...new Set(otherParts.filter(Boolean))].filter((option) => option.length > 2);
+  // Distractors are the short part-names of OTHER concepts inside the SAME
+  // subject family ("MQTT Broker", "Switch", "CPU"...) plus the family's
+  // plausible-but-wrong word list — never a concept from another subject, and
+  // never part of this topic, so exactly one answer can be correct.
+  const distractors = distractorPool(profile);
   const pick = (offset) => {
     const out = [];
     for (let i = 0; out.length < 3 && i < distractors.length; i += 1) {
@@ -169,6 +168,9 @@ function buildMcq(profile, topic, knowledge, draft) {
   if (banglaSteps.length) {
     const otherSteps = Object.entries(BANGLA_CONTENT)
       .filter(([id]) => !(profile.matchedIds ?? []).includes(id))
+      // steps may also come from the subject-neutral ('general') concepts, but
+      // never from another subject — a wrong option must still look like a step
+      .filter(([id]) => sameFamilyAs(profile, id) || familyOfConcept(id) === 'general')
       .map(([, entry]) => shortLabel(entry.steps?.[0] ?? ''))
       .filter(Boolean);
     questions.push({
@@ -180,6 +182,39 @@ function buildMcq(profile, topic, knowledge, draft) {
 
   // each option list must have four distinct options
   return questions.filter((entry) => new Set(entry.options).size === 4);
+}
+
+/** The subject family of a concept id ('iot', 'dbms', 'microcontroller' …). */
+const familyOfConcept = (conceptId) => CONCEPT_ENTRIES.find((entry) => entry.id === conceptId)?.family;
+
+/**
+ * May a word/concept of `conceptId` be used for this topic's questions?
+ * Same family only — or any family when the subject is a custom one the analyser
+ * could not classify (then there is no "other subject" to leak from).
+ */
+function sameFamilyAs(profile, conceptId) {
+  const family = profile.subjectFamily ?? 'unknown';
+  if (family === 'unknown') return true;
+  return familyOfConcept(conceptId) === family;
+}
+
+/**
+ * The wrong options for one topic's MCQs: parts of other concepts in the same
+ * subject family first, then that family's plausible-but-wrong words.
+ * Deliberately empty of other families — this is the mapping rule.
+ */
+function distractorPool(profile) {
+  const family = profile.subjectFamily ?? 'unknown';
+  const matched = new Set(profile.matchedIds ?? []);
+  const sameFamily = CONCEPT_ENTRIES.filter(
+    (entry) => !matched.has(entry.id) && (family === 'unknown' || entry.family === family)
+  );
+  const options = [
+    ...sameFamily.flatMap((entry) => (entry.components ?? []).map(shortLabel)),
+    ...(FAMILY_DISTRACTORS[family] ?? []),
+    ...(family === 'unknown' ? Object.values(FAMILY_DISTRACTORS).flat() : []),
+  ];
+  return [...new Set(options.filter(Boolean))].filter((option) => option.length > 2);
 }
 
 function buildVivaQuestions(profile, topic, knowledge, draft) {

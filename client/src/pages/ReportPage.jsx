@@ -17,15 +17,33 @@ import { REVISION_STAGE_LABEL, TOPIC_STATUS } from '../lib/status.js';
  * searchable and readable.
  *
  * The report contains: student name (from Settings → /api/meta), generated date, overall progress, subject
- * and chapter performance, exam results, weak/strong topics, study statistics.
+ * and chapter performance, exam results, weak/strong topics, topic progress and
+ * study statistics.
  */
 const REPORTABLE_STATUSES = ['not_started', 'studying', 'completed', 'needs_revision'];
+
+/** Topics the student has really started — used by the topic-progress section. */
+function startedTopics(subjects = []) {
+  return subjects.flatMap((subject) =>
+    (subject.chapters ?? []).flatMap((chapter) =>
+      (chapter.topics ?? [])
+        .filter((topic) => topic.status && topic.status !== 'not_started')
+        .map((topic) => ({
+          key: topic.id,
+          subjectName: subject.name,
+          chapterLabel: `Ch ${chapter.number} — ${chapter.name}`,
+          topic,
+        }))
+    )
+  );
+}
 
 export default function ReportPage() {
   const { subjects, semester, dashboard, meta } = useAppData();
   const [advanced, setAdvanced] = useState(null);
   const [error, setError] = useState(null);
   const [trimesterNote] = useState('');
+  const tracked = startedTopics(subjects);
 
   useEffect(() => {
     let cancelled = false;
@@ -306,6 +324,45 @@ export default function ReportPage() {
                 ))}
             </tbody>
           </table>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-base font-semibold text-ink-900">৯. Topic progress</h2>
+          {tracked.length === 0 ? (
+            <p className="text-sm text-ink-600">
+              এখনো কোনো topic শুরু করা হয়নি — শুরু করলেই এখানে topic-ভিত্তিক progress বসবে।
+            </p>
+          ) : (
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-ink-300 text-left text-xs text-ink-500">
+                  <th className="py-1.5">Subject · Chapter</th>
+                  <th className="py-1.5">Topic</th>
+                  <th className="py-1.5">অবস্থা</th>
+                  <th className="py-1.5">Revision</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tracked.slice(0, 60).map((row) => (
+                  <tr key={row.key} className="border-b border-ink-100">
+                    <td className="py-1.5 text-ink-600">
+                      {row.subjectName} · {row.chapterLabel}
+                    </td>
+                    <td className="py-1.5 text-ink-700">{row.topic.name}</td>
+                    <td className="py-1.5">{TOPIC_STATUS[row.topic.status]?.label ?? row.topic.status}</td>
+                    <td className="py-1.5">
+                      {REVISION_STAGE_LABEL[row.topic.revisionStage] ?? row.topic.revisionStage}
+                      {row.topic.revisionDue ? ' · দরকার' : ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <p className="mt-1 text-[11px] text-ink-500">
+            যেসব topic-এ সত্যিই কাজ হয়েছে সেগুলোই দেখানো হচ্ছে{tracked.length > 60 ? ' (প্রথম ৬০টি)' : ''} — বাকিগুলো
+            এখনো শুরু হয়নি, Chapter পেজে সবগুলো দেখা যায়।
+          </p>
         </section>
 
         <footer className="border-t border-ink-200 pt-3 text-[11px] text-ink-500">

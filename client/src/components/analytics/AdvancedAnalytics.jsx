@@ -70,6 +70,8 @@ export default function AdvancedAnalytics({ data, error }) {
     .filter((chapter) => chapter.answered > 0)
     .sort((a, b) => a.accuracy - b.accuracy);
   const weakChapters = chaptersWithData.filter((chapter) => chapter.hasEnoughData && chapter.accuracy < 60);
+  // "rate" is only shown once there is something to rate
+  const answeredAny = totals.questionsAnswered + totals.examQuestions > 0;
 
   return (
     <div className="space-y-4">
@@ -84,9 +86,18 @@ export default function AdvancedAnalytics({ data, error }) {
           <StatCard label="Topic complete" value={`${totals.topicsCompleted}/${totals.topics}`} tone="brand" />
           <StatCard label="প্রশ্নের উত্তর" value={totals.questionsAnswered} hint={`quiz accuracy ${totals.perQuestionAccuracy}%`} />
           <StatCard label="Exam" value={totals.exams} hint={totals.exams ? `গড় ${totals.averageExamScore}%` : 'এখনো exam দাওনি'} />
-          <StatCard label="সঠিক উত্তর" value={totals.correctAnswers + totals.examCorrect} />
-          <StatCard label="ভুল উত্তর" value={totals.wrongAnswers + totals.examWrong} />
+          <StatCard
+            label="সঠিক উত্তর"
+            value={totals.correctAnswers + totals.examCorrect}
+            hint={answeredAny ? `correct rate ${totals.accuracy}%` : 'এখনো উত্তর দাওনি'}
+          />
+          <StatCard
+            label="ভুল উত্তর"
+            value={totals.wrongAnswers + totals.examWrong}
+            hint={answeredAny ? `wrong rate ${100 - totals.accuracy}%` : 'এখনো উত্তর দাওনি'}
+          />
           <StatCard label="Exam সেরা" value={totals.exams ? `${totals.bestExamScore}%` : '—'} icon={Trophy} />
+          <StatCard label="Exam সর্বনিম্ন" value={totals.exams ? `${totals.lowestExamScore}%` : '—'} />
           <StatCard label="Streak" value={`${streak.current} দিন`} hint={`সর্বোচ্চ ${streak.longest} দিন`} />
         </div>
 

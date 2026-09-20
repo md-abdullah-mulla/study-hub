@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Flag, Send, AlertCircle, Sparkles } from 'lucide-react';
 import { Card, Button, Badge, ConfirmDialog } from '../ui/index.jsx';
+import { examSecondsLeft, examElapsedSeconds, formatClock } from '../../lib/examTime.js';
 
 /**
  * Running an exam (Phase 5).
  *
  * Exam rules that are visible on this screen:
  *  - one question at a time, with Previous / Next and a clickable question map
- *  - a real countdown; when it reaches 0:00 the exam is submitted automatically
+ *  - a real countdown built from the exam's startedAt (survives a page refresh);
+ *    when it reaches 0:00 the exam is submitted automatically
  *  - answered / unanswered are counted live, and the student sees the count
  *    before submitting
  *  - "পরে করব" marks a question to come back to (flag), which is different from
@@ -15,19 +17,14 @@ import { Card, Button, Badge, ConfirmDialog } from '../ui/index.jsx';
  */
 const OPTION_LETTERS = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ'];
 
-const formatClock = (totalSeconds) => {
-  const safe = Math.max(0, Math.floor(totalSeconds));
-  const minutes = String(Math.floor(safe / 60)).padStart(2, '0');
-  const seconds = String(safe % 60).padStart(2, '0');
-  return `${minutes}:${seconds}`;
-};
-
 export default function ExamRunner({ exam, onSubmit, onCancel, busy }) {
   const [answers, setAnswers] = useState({});
   const [flags, setFlags] = useState({});
   const [index, setIndex] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(exam.durationMinutes * 60);
+  // the clock is tied to the exam's own start time, not to this screen mounting,
+  // so refreshing the page can never hand out a fresh countdown
+  const [secondsLeft, setSecondsLeft] = useState(() => examSecondsLeft(exam));
 
   const questions = exam.questions;
   const question = questions[index];
@@ -38,23 +35,27 @@ export default function ExamRunner({ exam, onSubmit, onCancel, busy }) {
   );
   const unansweredCount = questions.length - answeredCount;
 
-  // countdown — the exam submits itself when the time is over
+  // countdown — the exam submits itself when the time is over. The answers are
+  // read through a ref so the auto-submit always sends what the student has
+  // really answered so far (a captured object would submit an empty sheet).
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
+
   useEffect(() => {
     if (busy) return undefined;
-    const started = Date.now();
-    const initial = secondsLeft;
-    const timer = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - started) / 1000);
-      const left = initial - elapsed;
+    const tick = () => {
+      const left = examSecondsLeft(exam);
       setSecondsLeft(left);
       if (left <= 0) {
         clearInterval(timer);
-        onSubmit(answers, initial);
+        onSubmit(answersRef.current, examElapsedSeconds(exam));
       }
-    }, 1000);
+    };
+    const timer = setInterval(tick, 1000);
+    tick();
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy]);
+  }, [busy, exam]);
 
   const setAnswer = (value) => setAnswers((current) => ({ ...current, [question.id]: value }));
 
@@ -210,7 +211,7 @@ export default function ExamRunner({ exam, onSubmit, onCancel, busy }) {
         confirmLabel="হ্যাঁ, জমা দাও"
         busy={busy}
         onClose={() => setConfirmOpen(false)}
-        onConfirm={() => onSubmit(answers, exam.durationMinutes * 60 - secondsLeft)}
+        onConfirm={() => onSubmit(answers, examElapsedSeconds(exam))}
       />
     </div>
   );

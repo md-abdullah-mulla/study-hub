@@ -228,10 +228,17 @@ export function createExam(userId, body = {}) {
 /** The exam without any correct answer — what the browser may see before submitting. */
 function publicExam(exam) {
   const questions = JSON.parse(exam.questionsJson);
+  // The deadline is sent as its own field so the browser can run an honest
+  // countdown that survives a page refresh (see client/src/lib/examTime.js).
+  const endsAt =
+    exam.startedAt && Number.isFinite(new Date(exam.startedAt).getTime())
+      ? new Date(new Date(exam.startedAt).getTime() + Number(exam.durationMinutes) * 60_000).toISOString()
+      : null;
   return {
     id: exam.id,
     title: exam.title,
     scopeLabel: exam.scopeLabel,
+    endsAt,
     subjectId: exam.subjectId,
     chapterId: exam.chapterId,
     topicId: exam.topicId,

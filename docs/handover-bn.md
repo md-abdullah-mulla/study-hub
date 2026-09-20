@@ -108,10 +108,10 @@ service, repository ফাইলগুলোই ব্রাউজারে চ�
 | **Quiz** — chapter-wise MCQ / সত্য-মিথ্যা / সংক্ষিপ্ত / Viva, স্কোর + accuracy, **দুর্বল topic**, revision suggestion | ✅ **নতুন (Phase 3)** |
 | **🖼️ Create Illustration (AI Image Prompt Generator)** — প্রতি topic-এর পাশে button, ৫ ধরনের illustration, topic-specific English prompt, edit + copy + regenerate; **কোনো AI API বা API key লাগে না** | ✅ **সম্পূর্ণ (Phase 4-এর প্রথম feature)** |
 | **✨ Study Content (AI Assistant)** — প্রতি topic-এর পাশে button → নয়টা part (সংজ্ঞা, ব্যাখ্যা, point, উদাহরণ, পরীক্ষার উত্তর, সম্ভাব্য প্রশ্ন, MCQ, Viva, রিভিশন সামারি), save / edit / copy / regenerate / delete, AI note আলাদা; **কোনো AI API বা API key লাগে না** | ✅ **নতুন (Phase 4-এর দ্বিতীয় feature)** |
-| **📝 Exam Mode** — subject / chapter / topic ধরে নিজে পরীক্ষা বানাও (প্রশ্ন সংখ্যা ১–৫০, সময় ১–৩০০ মিনিট), টাইমার + progress, জমা দিলে ফলাফল, দ্বিতীয়বার জমা দেওয়া যায় না, আগের পরীক্ষাগুলোর ফল সংরক্ষিত; প্রতি পরীক্ষায় badge দেখায় প্রশ্নটা pattern-based নাকি তোমার নিজের প্রশ্ন ব্যাংক থেকে | ✅ **নতুন (Task 2)** |
+| **📝 Exam Mode** — subject / chapter / topic ধরে নিজে পরীক্ষা বানাও (প্রশ্ন সংখ্যা ১–৫০, সময় ১–৩০০ মিনিট), টাইমার + progress, জমা দিলে ফলাফল, দ্বিতীয়বার জমা দেওয়া যায় না, আগের পরীক্ষাগুলোর ফল সংরক্ষিত; প্রতি পরীক্ষায় badge দেখায় প্রশ্নটা pattern-based নাকি তোমার নিজের প্রশ্ন ব্যাংক থেকে। টাইমার exam-এর `startedAt` থেকে চলে, তাই page refresh করলেও সময় আবার শুরু হয় না; "Time Taken" server-এ মাপা হয় (নিজে কম দেখানো যায় না) | ✅ **নতুন (Task 2)** |
 | **📈 Advanced Analytics** — subject-wise progress + accuracy, exam trend, daily/weekly/monthly activity, correct vs wrong, revision stage-wise হিসাব, weak/strong topic-এর রায় (৩টির কম উত্তর হলে রায় দেয় না — অনুমান করে না) | ✅ **নতুন (Task 3)** |
 | **Insight Card (Dashboard)** — dashboard-এর উপরেই accuracy, exam গড়, topic complete, streak + সর্বোচ্চ ৩টি insight, চাইলে পুরো analytics-এ যাওয়ার লিংক | ✅ **নতুন (Task 3)** |
-| **🧾 PDF Report (`/report`)** — student name (Settings থেকে), তারিখ, overall progress, subject/chapter performance, exam result, দুর্বল-শক্ত topic, study statistics — ব্রাউজারের Print → Save as PDF দিয়ে **বাংলা ঠিকভাবে** বসে (ছবি নয়, আসল লেখা, তাই খোঁজাও যায়) | ✅ **নতুন (Task 4)** |
+| **🧾 PDF Report (`/report`)** — student name (Settings থেকে), তারিখ, overall progress, subject/chapter performance, exam result, দুর্বল-শক্ত topic, **topic-wise progress**, study statistics, insights — মোট ৯টি section; ব্রাউজারের Print → Save as PDF দিয়ে **বাংলা ঠিকভাবে** বসে (ছবি নয়, আসল লেখা, তাই খোঁজাও যায়) | ✅ **নতুন (Task 4)** |
 | **Auto Backup** — অ্যাপ চালু হলেই নিজে নিজে snapshot (১২ ঘণ্টা পেরোলে), সর্বশেষ ৫টি auto + ১০টি manual snapshot রাখে; download / restore / delete; restore-এর আগে safety snapshot + confirm; ডেটাবেস নষ্ট হলে app নিজেই recovery screen দেয় | ✅ **নতুন (Task 4)** |
 | সত্যিকারের AI API দিয়ে content, আর prompt থেকে সত্যিকারের ছবি generation (তোমার API key লাগবে) | ⏳ Phase 5 — architecture আলাদা রাখা আছে, শুধু একটা function যোগ করলেই হবে |
 
@@ -153,14 +153,51 @@ Settings → `PATCH /api/profile` → `/api/meta` থেকেই বসে (`me
 
 ---
 
+## 🧭 Content mapping rule (Task 1-এর নির্দেশ)
+
+Content generate হওয়ার সময় সবসময় এই hierarchy মানা হয়:
+
+> **Topic → Subject → Chapter → Content**
+
+মানে Microcontroller-এর topic কখনো IoT বা DBMS-এর লেখা পাবে না — আর उল্টোটাও না।
+নিয়মটা `server/src/services/illustration/topicAnalyzer.js`-এ 적용 করা:
+
+1. প্রতিটি concept-এর একটা `family` আছে (`iot | network | dbms | microcontroller | security | general`)
+   আর প্রতিটি topic-এর subject/chapter থেকে family বের করা হয় (`detectSubjectFamily`)।
+2. ভিন্ন family-র concept শুধু তখনই ব্যবহার হয় যখন topic-এর **নিজের নাম** সেই concept-এর
+   `strong` শব্দের সাথে হুবহু মেলে (যেমন যেকোনো subject-এ "File System" topic)।
+3. একই লেভেলে একাধিক concept মিললে সবগুলোই নেওয়া হয় ("File System vs DBMS" দুটোই পায়),
+   আর বেশি specific concept (উদাহরণ: Interrupt **Vector Table**) কম specific একটার
+   (সাধারণ Interrupt) আগে জেতে — এজন্য `weight` আছে।
+
+এতে যে চারটা ভুল আগে ছিল, সেগুলো এখন ঠিক:
+
+| Topic (Microcontroller) | আগে (ভুল) | এখন (ঠিক) |
+|---|---|---|
+| Architecture concepts | IoT Layer-এর লেখা | `mcu-architecture` — CPU, ALU, Control Unit, Register, Memory, I/O, Bus |
+| Harvard vs Von Neumann architecture | IoT Layer-এর লেখা | `harvard-von-neumann` — দুই architecture, memory organization, bus, speed, সুবিধা/অসুবিধা, তুলনা টেবিল |
+| RISC vs CISC | IoT Layer-এর লেখা | `risc-cisc` — RISC/CISC সংজ্ঞা, instruction size/complexity, cycle, power, তুলনা টেবিল |
+| Interrupt vector table | DBMS-এর লেখা | `interrupt-vector-table` — interrupt, IVT, vector address, ISR, reset vector, table |
+
+**MCQ-র option-ও একই নিয়ম মানে:** ভুল option (distractor) শুধু topic-এর নিজের subject family
+থেকে নেওয়া হয় (নিজের family-র অন্যান্য concept + `FAMILY_DISTRACTORS` তালিকা)। আগে সব family
+মিশিয়ে নেওয়া হত — তাই Harvard-এর প্রশ্নে "CoAP Client" চলে আসত। এখন যাচাই করা:
+৭৭টা topic-এর কোনো MCQ-তে অন্য subject-এর শব্দ নেই।
+
+**Exam Mode-এর প্রশ্নও একই নিয়মে বানানো** (`Subject → Chapter → Topic → Question`) — selected
+topic-এর বাইরের প্রশ্ন কখনো আসে না, আর প্রতি প্রশ্নে badge দেখায় সেটা pattern-based না তোমার
+নিজের question bank-এর।
+
+---
+
 ## Test-এর ফল (সবগুলো সবুজ)
 
 | Test | ফল |
 |---|---|
-| Server API test (Node-এ) | ✅ 53/53 |
-| Browser-mode backend test (sql.js) | ✅ 7/7 |
-| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 61/61 |
-| Server-mode full UI smoke (timer + analytics + quiz + illustration + study content + exam + report + backup সহ) | ✅ 123/123 |
+| Server API test (Node-এ) | ✅ 56/56 |
+| Browser-mode backend test (sql.js) | ✅ 12/12 |
+| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 63/63 |
+| Server-mode full UI smoke (timer + analytics + quiz + illustration + study content + exam + report + backup সহ) | ✅ 130/130 |
 | oxlint | ✅ 0 warning, 0 error (78 files) |
 | Production + Pages + Vercel build | ✅ ঠিকঠাক (`dist/`, `dist-vercel/`) |
 

@@ -1479,3 +1479,108 @@ test('automatic backups only happen when one is due', async () => {
   const list = await get('/api/backups');
   assert.equal(list.body.backups.filter((row) => row.kind === 'auto').length, 1, 'no duplicate auto backups');
 });
+
+// ---------------------------------------------------------------------------
+// Task 1 (later report) — content may never cross subjects
+// ---------------------------------------------------------------------------
+
+test('MCQ options never come from another subject (the wrong-content bug)', async () => {
+  const otherSubjectWords = {
+    microcontroller: /MQTT|CoAP|IoT|Broker|Subscriber|Foreign key|Stored procedure|DVR|Firewall rule/i,
+    iot: /Oscillator|Stack pointer|Foreign key|Stored procedure|Subnet mask|DVR storage/i,
+    dbms: /MQTT|CoAP|Oscillator|Stack pointer|Subnet mask|Alarm siren/i,
+  };
+
+  for (const [subjectName, forbidden] of [
+    ['Microcontroller', otherSubjectWords.microcontroller],
+    ['IoT & IoT Architecture', otherSubjectWords.iot],
+    ['DBMS', otherSubjectWords.dbms],
+  ]) {
+    const subject = await findSubject(subjectName);
+    for (const chapter of subject.chapters) {
+      for (const topic of chapter.topics) {
+        const generated = await post(`/api/study-content/topic/${topic.id}/generate`, { kinds: ['mcq'] });
+        assert.equal(generated.status, 200);
+        const body = generated.body.sections[0].body;
+        if (!body || /যথেষ্ট তথ্য/.test(body)) continue; // honest "not enough data" answer
+        assert.ok(
+          !forbidden.test(body),
+          `${subjectName} → "${topic.name}" must not offer options from another subject:\n${body}`
+        );
+      }
+    }
+  }
+});
+
+test('the four reported topics get content from their own subject', async () => {
+  const mcu = await findSubject('Microcontroller');
+  const expected = {
+    'Architecture concepts': ['mcu-architecture', /CPU/, /ALU|Control Unit/, /Bus/],
+    'Harvard vs Von Neumann architecture': ['harvard-von-neumann', /Harvard/, /Von Neumann/, /\|/, /অসুবিধা/],
+    'RISC vs CISC': ['risc-cisc', /RISC/, /CISC/, /instruction/i, /\|/],
+    'Interrupt vector table': ['interrupt-vector-table', /Vector/, /ISR/, /Reset/i, /\|/],
+  };
+  const allTopics = mcu.chapters.flatMap((chapter) => chapter.topics);
+
+  for (const [name, [conceptId, ...patterns]] of Object.entries(expected)) {
+    const topic = allTopics.find((entry) => entry.name === name);
+    assert.ok(topic, `seed has the topic "${name}"`);
+    const generated = await post(`/api/study-content/topic/${topic.id}/generate`, {});
+    assert.deepEqual(generated.body.matchedIds, [conceptId], `${name} → ${conceptId}`);
+    assert.equal(generated.body.draft, false, 'real hand-written content, not a draft skeleton');
+
+    const whole = generated.body.sections.map((section) => section.body).join('\n');
+    assert.ok(!/IoT layer|CoAP|MQTT|Foreign key|Stored procedure/i.test(whole), `${name} has no other subject's text`);
+    for (const pattern of patterns) assert.match(whole, pattern, `${name} explains ${pattern}`);
+  }
+});
+
+test('every seeded topic gets content from its own subject family', async () => {
+  const familyOf = {
+    'Computer Network': 'network',
+    'IoT & IoT Architecture': 'iot',
+    DBMS: 'dbms',
+    Microcontroller: 'microcontroller',
+    'Security-Based Surveillance System': 'security',
+  };
+  const conceptFamily = {
+    mqtt: 'iot', coap: 'iot', 'iot-layers': 'iot', 'iot-general': 'iot', 'edge-cloud': 'iot', sensor: 'iot',
+    'computer-network': 'network', 'client-server': 'network', 'peer-to-peer': 'network',
+    dbms: 'dbms', 'file-system': 'dbms',
+    microcontroller: 'microcontroller', 'memory-organization': 'microcontroller', 'timer-interrupt': 'microcontroller',
+    'io-port': 'microcontroller', 'serial-parallel': 'microcontroller', 'mcu-architecture': 'microcontroller',
+    'harvard-von-neumann': 'microcontroller', 'risc-cisc': 'microcontroller', 'interrupt-vector-table': 'microcontroller',
+    'adc-pwm': 'microcontroller',
+    surveillance: 'security', 'access-control': 'security',
+    'communication-protocol': 'general', 'embedded-system': 'general',
+  };
+
+  const tree = await get('/api/progress-tree');
+  let checked = 0;
+  let drafts = 0;
+  for (const subject of tree.body.subjects) {
+    const family = familyOf[subject.name];
+    if (!family) continue; // a subject the student created themselves
+    for (const chapter of subject.chapters) {
+      for (const topic of chapter.topics) {
+        const generated = await post(`/api/study-content/topic/${topic.id}/generate`, { kinds: ['easy_definition'] });
+        const ids = generated.body.matchedIds ?? [];
+        if (generated.body.draft) {
+          drafts += 1;
+          continue;
+        }
+        assert.ok(ids.length > 0, `${topic.name} matched something`);
+        for (const id of ids) {
+          const concept = conceptFamily[id];
+          assert.ok(
+            concept === family || concept === 'general',
+            `${subject.name} → "${topic.name}" matched ${id} (${concept}), which belongs to another subject`
+          );
+        }
+        checked += 1;
+      }
+    }
+  }
+  assert.ok(checked >= 70, `checked the seeded topics (${checked})`);
+  assert.equal(drafts, 0, 'every seeded topic has hand-written knowledge');
+});

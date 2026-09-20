@@ -342,13 +342,18 @@ check(
 );
 check('offline analytics explains the numbers in words', page.includes('এই data থেকে যা বোঝা যাচ্ছে'));
 check('offline analytics offers the PDF export', page.includes('Export Report as PDF'));
+check(
+  'offline analytics shows highest and lowest exam score',
+  page.includes('Exam সেরা') && page.includes('Exam সর্বনিম্ন'),
+  page.slice(0, 300)
+);
 
 await root.unmount();
 root = await renderAt('/report', 2600);
 page = text();
 check(
   'offline PDF report renders every section',
-  ['Smart Semester Study Report', 'Overall Progress', 'Exam results', 'Study statistics'].every((heading) => page.includes(heading)),
+  ['Smart Semester Study Report', 'Overall Progress', 'Exam results', 'Study statistics', 'Topic progress'].every((heading) => page.includes(heading)),
   page.slice(0, 300)
 );
 const offlinePrintButton = byText('Export Report as PDF');
@@ -399,6 +404,22 @@ check(
   'offline content is Bangla, topic-specific and mentions no API key',
   offlineContent.length > 60 && /[\u0980-\u09FF]/.test(offlineContent) && !/api key/i.test(offlineContent),
   offlineContent.slice(0, 120)
+);
+
+// the content may never cross subjects — also true with no server at all
+const offlineMc = await api('/progress-tree');
+const offlineMcuSubject = offlineMc.subjects.find((entry) => entry.name === 'Microcontroller');
+const offlineMcuTopic = offlineMcuSubject.chapters.flatMap((chapter) => chapter.topics).find((topic) => topic.name === 'Architecture concepts');
+const offlineMcu = await api(`/study-content/topic/${offlineMcuTopic.id}/generate`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: '{}',
+});
+check(
+  'offline Microcontroller content stays in its own subject family',
+  offlineMcu.matchedIds.includes('mcu-architecture') &&
+    !/MQTT|CoAP|Foreign key/i.test(offlineMcu.sections.map((section) => section.body).join('\n')),
+  JSON.stringify(offlineMcu.matchedIds)
 );
 
 await click(byText('সব save করো'), 2400);

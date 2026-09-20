@@ -698,6 +698,26 @@ export const CONCEPT_ENTRIES = [
   },
 ];
 
+/**
+ * Plausible-but-wrong option names, per subject family (Task 1 follow-up).
+ *
+ * Why this exists: the MCQ builder used to take its wrong options from EVERY
+ * concept in the library, so a Microcontroller question could offer "CoAP Client"
+ * or a DBMS question could offer "MQTT Broker". That is exactly the wrong-subject
+ * content leak the mapping rule forbids — one subject's words must never appear
+ * in another subject's topic. Every option now comes from the topic's own family
+ * (this list is the top-up when the family has few concepts), and none of these
+ * words is a component of any concept, so exactly one option stays correct.
+ */
+export const FAMILY_DISTRACTORS = {
+  iot: ['Gateway device', 'Cloud dashboard', 'Sensor node', 'Data logger', 'Actuator', 'Wi-Fi module'],
+  network: ['Packet header', 'Subnet mask', 'Firewall rule', 'Bandwidth', 'Router table', 'IP address'],
+  dbms: ['Index', 'Foreign key', 'Stored procedure', 'View', 'Transaction log', 'Trigger'],
+  microcontroller: ['Oscillator circuit', 'Stack pointer', 'Status flag', 'Reset circuit', 'Clock source', 'Cache line'],
+  security: ['DVR storage', 'Motion sensor', 'Alarm siren', 'Backup battery', 'Tamper switch', 'Network switch'],
+  general: ['Test plan', 'Documentation'],
+};
+
 /** Words that carry no meaning on their own when extracting keywords. */
 export const STOPWORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'basic', 'by', 'concept', 'concepts', 'definition', 'for', 'from',
