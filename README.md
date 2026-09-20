@@ -7,7 +7,8 @@
 | ওয়েবসাইট (Vercel) | **https://study-hub-virid.vercel.app/** |
 | ওয়েবসাইট (GitHub Pages) | **https://md-abdullah-mulla.github.io/study-hub/** |
 | **App version** | ওয়েবসাইট খুলে **Settings → App হিসেবে ইনস্টল করো** (অ্যাপ আইকন হোম স্ক্রিনে/Start menu-তে) |
-| **Desktop app** | **[⬇ AppImage](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0.AppImage)** (ইনস্টল ছাড়াই) · **[⬇ .deb](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/study-hub-desktop_1.0.0_amd64.deb)** (উবুন্টু/ডেবিয়ান) — বিস্তারিত `docs/desktop-app-bn.md` |
+| **Desktop app — Windows** | **[⬇ portable ZIP](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0-win-x64-portable.zip)** (নামিয়ে unzip করে `Study Hub.exe` চালান) |
+| **Desktop app — Linux** | **[⬇ AppImage](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0.AppImage)** (ইনস্টল ছাড়াই) · **[⬇ .deb](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/study-hub-desktop_1.0.0_amd64.deb)** (উবুন্টু/ডেবিয়ান) — বিস্তারিত `docs/desktop-app-bn.md` |
 
 All three run the whole backend (SQLite compiled to WebAssembly) inside the app, so nothing needs a
 server — and everything keeps working offline. The installed app and the desktop app ship the fonts
@@ -306,6 +307,9 @@ cd client && npm run build:desktop     # ওয়েব অ্যাপ → dis
 cd ../desktop && npm install
 npm start                              # চালিয়ে দেখো (electron window)
 npm run dist:linux                     # AppImage + deb  → desktop/release/
+npm run dist:win                       # Windows installer (.exe) — Windows/CI-তে চালাতে হয়
+# Windows-এর portable ZIP লিনাক্স থেকেই বানানো যায়:
+npx electron-builder --win dir --config.win.signAndEditExecutable=false
 ```
 
 পূর্ণ নির্দেশনা, ডেটা কোথায় থাকে, আর কেন `file://` নয় `app://` — `docs/desktop-app-bn.md`।

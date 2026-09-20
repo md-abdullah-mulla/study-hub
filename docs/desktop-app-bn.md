@@ -10,12 +10,23 @@
 
 | আপনি যা চান | ফাইল | ডাউনলোড |
 |---|---|---|
+| **উইন্ডোজ ১০/১১ (64-bit)** | `Study Hub-1.0.0-win-x64-portable.zip` (১১১ MB) | **[⬇ download](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0-win-x64-portable.zip)** |
 | উবুন্টু / ডেবিয়ান / লিনাক্স মিন্ট | `study-hub-desktop_1.0.0_amd64.deb` (৭৫ MB) | **[⬇ download](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/study-hub-desktop_1.0.0_amd64.deb)** |
 | যেকোনো লিনাক্স (ইনস্টল ছাড়াই চলে) | `Study Hub-1.0.0.AppImage` (১০৪ MB) | **[⬇ download](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0.AppImage)** |
-| উইন্ডোজ | `Study Hub Setup 1.0.0.exe` | নিজে বানাতে হবে (ধাপ ৪) — উইন্ডোজ মেশিনে |
-| ম্যাক | `Study Hub-1.0.0.dmg` | নিজে বানাতে হবে — ম্যাক মেশিনে |
+| ম্যাক | `Study Hub-1.0.0.dmg` | নিজে বানাতে হবে — ম্যাক মেশিনে (`npm run dist:mac`) |
 
 সব ফাইল একসাথে: **https://github.com/md-abdullah-mulla/study-hub/releases**
+
+### 🪟 উইন্ডোজে (portable — ইনস্টল লাগে না)
+
+1. ZIP নামিয়ে **Extract All** করুন (ZIP-এর ভিতর থেকেই চালাবেন না)।
+2. ফল্ডারের ভিতরের **`Study Hub.exe`** ডাবল-ক্লিক করুন — ব্যস।
+3. ডেস্কটপ shortcut চাইলে: `Study Hub.exe` → Right click → **Send to → Desktop**।
+
+> প্রথমবার Windows SmartScreen "Windows protected your PC" দেখাতে পারে — ফাইলটা সাইন করা নয়
+> (কোড সাইনিং সার্টিফিকেট নেই)। **More info → Run anyway**।
+>
+> ডেটা থাকে `%APPDATA%\Study Hub\`-এ (অ্যাপের মেনু → **ডেটা ফোল্ডার খুলো**)।
 
 লিনাক্সে ইনস্টল:
 
@@ -93,10 +104,24 @@ npm run dist:mac                 # dmg (ম্যাকে চালাতে �
 আউটপুট থাকে `desktop/release/`-এ। `npm start` / `dist:*` আগে `prepare-app` নিজেই চলে, যেটা
 `client/dist-desktop` → `desktop/app` কপি করে এবং build না থাকলে স্পষ্ট error দেয়।
 
-**উইন্ডোজ/ম্যাক installer কেন এখানে বানানো যায়নি:** electron-builder উইন্ডোজের `.exe` বানাতে
-নিজের NSIS toolchain (বা wine) লাগে, আর ম্যাকের `.dmg` বানাতে ম্যাক লাগে। তাই লিনাক্সের
-AppImage + deb বানিয়ে যাচাই করা হয়েছে, আর উইন্ডোজ/ম্যাকের কমান্ড দুটো উপরের মতো দিলাম —
-নিজের মেশিনে একবার চালালেই তৈরি।
+**Windows:** দুইভাবে বানানো যায় —
+
+```bash
+# ক) portable ফোল্ডার + ZIP (লিনাক্স/ম্যাক থেকেও বানানো যায়, wine লাগে না)
+npx electron-builder --win dir --config.win.signAndEditExecutable=false
+# তারপর release/win-unpacked/ → zip করে দিন  (এটাই Releases-এ দেওয়া আছে)
+
+# খ) সত্যিকারের NSIS installer (.exe setup) — Windows মেশিনে
+npm run dist:win
+```
+
+`--config.win.signAndEditExecutable=false` দেওয়া হয়েছে কারণ .exe-তে আইকন/version বসাতে
+electron-builder-কে wine দিয়ে `rcedit` চালাতে হয়; সেটা ছাড়া অ্যাপ ঠিকঠাক চলে, শুধু exe-এর
+নিজের আইকন বদলানো যায় না — তাই অ্যাপ নিজের আইকন ফাইল থেকেই window/taskbar আইকন নেয়
+(`BrowserWindow({ icon })`)।
+
+**macOS installer (.dmg)** ম্যাক ছাড়া বানানো যায় না (কোড সাইনিং + ম্যাক toolchain লাগে) —
+`npm run dist:mac` কমান্ডটা প্রস্তুত আছে, ম্যাকে একবার চালালেই হবে।
 
 ---
 

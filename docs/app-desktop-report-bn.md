@@ -10,7 +10,8 @@
 | | কী | কোথায় পাবেন |
 |---|---|---|
 | **App version** | ওয়েবসাইটটাই এখন **ইনস্টল করা অ্যাপ** — হোম স্ক্রিনে/Start menu-তে আইকন, ব্রাউজারের ট্যাব ছাড়া নিজের উইন্ডোতে খোলে, **ইন্টারনেট ছাড়াও চলে** | সাইটে ঢুকে **Settings → “App হিসেবে ইনস্টল করো”** |
-| **Desktop version** | পিসির জন্য আলাদা অ্যাপ (Electron) — ব্রাউজার, সার্ভার, ইন্টারনেট কিছুই লাগে না | **[⬇ AppImage](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0.AppImage)** (ইনস্টল ছাড়াই) · **[⬇ .deb](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/study-hub-desktop_1.0.0_amd64.deb)** (উবুন্টু/ডেবিয়ান) |
+| **Desktop version — Windows** | পিসির জন্য আলাদা অ্যাপ (Electron), portable — unzip করে `Study Hub.exe` | **[⬇ ZIP](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0-win-x64-portable.zip)** |
+| **Desktop version — Linux** | একই অ্যাপ, লিনাক্সে | **[⬇ AppImage](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/Study.Hub-1.0.0.AppImage)** · **[⬇ .deb](https://github.com/md-abdullah-mulla/study-hub/releases/download/desktop-v1.0.0/study-hub-desktop_1.0.0_amd64.deb)** |
 
 দুটোই **একই কোড** — React UI + পুরো backend + SQLite (WebAssembly) — তাই কোথাও সার্ভার বা
 আলাদা database লাগে না।
@@ -75,7 +76,8 @@
 | `desktop && npm run pack` → `desktop/release/linux-unpacked` | ✅ |
 | AppImage | ✅ **Study Hub-1.0.0.AppImage** (১০৪ MB) |
 | deb | ✅ **study-hub-desktop_1.0.0_amd64.deb** (৭৫ MB) |
-| Windows / macOS installer | ⏳ এই লিনাক্স বক্সে বানানো যায় না (ধাপ ৭ দেখুন) |
+| Windows portable (ZIP, `Study Hub.exe`) | ✅ **Study Hub-1.0.0-win-x64-portable.zip** (১১১ MB) — লিনাক্স থেকেই বানানো (`--win dir --config.win.signAndEditExecutable=false`) |
+| Windows NSIS installer (.exe setup) / macOS dmg | ⏳ Windows/ম্যাক মেশিন (বা CI) লাগে — কমান্ড প্রস্তুত (`npm run dist:win` / `dist:mac`) |
 
 ---
 
@@ -85,7 +87,7 @@
 |---|---|---|
 | ওয়েবসাইট + App version | **https://study-hub-virid.vercel.app/** | ✅ live (নতুন deploy, alias verify করা) |
 | ওয়েবসাইট + App version | **https://md-abdullah-mulla.github.io/study-hub/** | ✅ live |
-| ডেস্কটপ ইনস্টলার | **github.com/md-abdullah-mulla/study-hub/releases** | ✅ release `desktop-v1.0.0`, দুইটাই upload (ডাউনলোড লিংক যাচাই করা) |
+| ডেস্কটপ ইনস্টলার | **github.com/md-abdullah-mulla/study-hub/releases** | ✅ release `desktop-v1.0.0`, **তিনটাই** upload: Windows ZIP + Linux AppImage + .deb (লিংক যাচাই করা) |
 | কোড | `main @ bb786db` | ✅ push করা |
 
 ---

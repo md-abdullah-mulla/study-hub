@@ -75,7 +75,11 @@ check(
 );
 
 const dash = await text();
-check('the dashboard loads inside the desktop app', dash.includes('Study Hub') && dash.includes('Semester'), dash.slice(0, 90));
+check(
+  'the app opens on the dashboard (not a not-found screen)',
+  dash.includes('Semester শেষ') && dash.includes("Today's Target"),
+  dash.slice(0, 110)
+);
 
 // --- every screen, through the app:// SPA fallback (real URLs, not hashes)
 let broken = 0;
@@ -84,6 +88,8 @@ for (const [route, label] of ROUTES) {
   await page.waitForTimeout(route === '' ? 3000 : 2200);
   const screen = await text();
   const bad = ['undefined', 'NaN', '[object Object]'].filter((word) => screen.includes(word));
+  // a screen that never loaded, or an address that does not exist, must fail loudly
+  if (/পেজটি পাওয়া যায়নি|Page not found/i.test(screen)) bad.push('not-found screen');
   const ok = screen.length > 200 && bad.length === 0;
   if (!ok) broken += 1;
   check(`desktop screen /${route} (${label}) opens`, ok, bad.length ? `prints ${bad.join(', ')}` : screen.slice(0, 80));
@@ -108,7 +114,7 @@ const networkRequests = requests.filter((url) => /^https?:/.test(url));
 check('the desktop app makes no network requests (truly offline)', networkRequests.length === 0, networkRequests.slice(0, 3).join(' | '));
 
 // --- data lives in the desktop app and survives a reload
-await page.goto('app://study-hub/index.html', { waitUntil: 'load' });
+await page.goto('app://study-hub/', { waitUntil: 'load' });
 await page.waitForTimeout(4000);
 const tree = JSON.parse(await page.evaluate(() => fetch('/api/progress-tree').then((r) => r.text())));
 const subject = tree.subjects.find((s) => s.name === 'Microcontroller') ?? tree.subjects[0];
@@ -137,7 +143,7 @@ check('no console errors in the desktop app', realErrors.length === 0, realError
 
 const shotDir = process.env.SHOT_DIR;
 if (shotDir) {
-  await page.goto('app://study-hub/index.html', { waitUntil: 'load' });
+  await page.goto('app://study-hub/', { waitUntil: 'load' });
   await page.waitForTimeout(3500);
   await page.screenshot({ path: `${shotDir}/desktop-dashboard.png` });
   await page.goto('app://study-hub/analytics', { waitUntil: 'load' });

@@ -20,7 +20,12 @@ const path = require('node:path');
 const SCHEME = 'app';
 const HOST = 'study-hub';
 const ROOT = path.join(__dirname, 'app'); // the built web app (scripts/prepare-app.mjs)
-const START_URL = `${SCHEME}://${HOST}/index.html`;
+
+// IMPORTANT: the app must open on "/" — not on "/index.html". The UI is a single
+// page app with routes, and "/index.html" is not one of them, so starting there
+// showed the student "পেজটি পাওয়া যায়নি" on launch (found by screenshotting the
+// real window). "/" is also what every server and the installed app use.
+const START_URL = `${SCHEME}://${HOST}/`;
 const LIVE_SITE = 'https://study-hub-virid.vercel.app/';
 const REPO_URL = 'https://github.com/md-abdullah-mulla/study-hub';
 
@@ -129,7 +134,7 @@ function buildMenu() {
         {
           label: 'Dashboard',
           accelerator: 'CmdOrCtrl+1',
-          click: () => openRoute('/index.html'),
+          click: () => openRoute('/'),
         },
         { label: 'Exam Mode', accelerator: 'CmdOrCtrl+2', click: () => openRoute('/exam') },
         { label: 'Analytics', accelerator: 'CmdOrCtrl+3', click: () => openRoute('/analytics') },
@@ -204,6 +209,10 @@ function createWindow() {
     minHeight: 620,
     title: 'Study Hub — Semester 6',
     backgroundColor: '#eef4ff',
+    // The window/taskbar icon comes from the app's own files. On Windows the .exe
+    // icon can only be replaced with a code-signing toolchain (wine + rcedit),
+    // which the portable build deliberately does not need — so the PNG is used.
+    icon: path.join(ROOT, 'icons', 'icon-512.png'),
     show: false,
     autoHideMenuBar: false,
     webPreferences: {

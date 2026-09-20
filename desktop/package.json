@@ -27,7 +27,7 @@
     "productName": "Study Hub",
     "directories": {
       "output": "release",
-      "buildResources": "build"
+      "buildResources": "assets"
     },
     "files": [
       "main.cjs",
@@ -44,7 +44,7 @@
         "deb"
       ],
       "category": "Education",
-      "icon": "build/icon.png",
+      "icon": "assets/icon.png",
       "synopsis": "Semester study manager \u2014 track, analyse, revise (offline)",
       "desktop": {
         "Name": "Study Hub",
@@ -58,7 +58,7 @@
         "nsis",
         "portable"
       ],
-      "icon": "build/icon.png"
+      "icon": "assets/icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -73,7 +73,7 @@
         "dmg"
       ],
       "category": "public.app-category.education",
-      "icon": "build/icon.png"
+      "icon": "assets/icon.png"
     }
   },
   "homepage": "https://study-hub-virid.vercel.app/",

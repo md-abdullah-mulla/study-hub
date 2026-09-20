@@ -25,7 +25,7 @@ mkdir -p "$stage/DEBIAN" "$stage/opt/Study Hub" "$stage/usr/share/applications" 
 
 cp -a "$unpacked/." "$stage/opt/Study Hub/"
 ln -sf "/opt/Study Hub/study-hub-desktop" "$stage/usr/bin/study-hub-desktop"
-cp "$here/build/icon.png" "$stage/usr/share/icons/hicolor/1024x1024/apps/study-hub-desktop.png"
+cp "$here/assets/icon.png" "$stage/usr/share/icons/hicolor/1024x1024/apps/study-hub-desktop.png"
 
 cat > "$stage/usr/share/applications/study-hub-desktop.desktop" <<'DESKTOP'
 [Desktop Entry]
