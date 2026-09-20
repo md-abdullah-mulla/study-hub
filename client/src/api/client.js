@@ -89,6 +89,8 @@ export const api = {
     regenerate: () => request('/plan/regenerate', { method: 'POST', body: {} }),
   },
 
+  analytics: () => request('/analytics'),
+
   sessions: {
     list: (params) => request(`/sessions${qs(params)}`),
     active: () => request('/sessions/active'),

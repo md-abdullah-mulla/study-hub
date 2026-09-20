@@ -141,6 +141,15 @@ export const studySessionRepo = {
     );
   },
 
+  /** Finished sittings only — an open session has no duration to average yet. */
+  finishedSessionCount(userId) {
+    return (
+      db
+        .prepare('SELECT COUNT(*) AS count FROM study_sessions WHERE user_id = ? AND ended_at IS NOT NULL')
+        .get(userId).count ?? 0
+    );
+  },
+
   minutesByLocalDate(userId) {
     return camelAll(
       db

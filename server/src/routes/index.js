@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { buildProgressTree } from '../services/progressService.js';
+import { buildStudyStats } from '../services/statsService.js';
 import { buildDashboard } from '../services/dashboardService.js';
 import { globalSearch } from '../services/searchService.js';
 import { parseImportText, applyImport } from '../services/importService.js';
@@ -46,6 +47,14 @@ export function apiRouter({ getUserId }) {
     '/progress-tree',
     asyncHandler(async (req, res) => {
       res.json(buildProgressTree(getUserId(req)));
+    })
+  );
+
+  // ---- study analytics (Phase 2: real timer data only) -------------------
+  router.get(
+    '/analytics',
+    asyncHandler(async (req, res) => {
+      res.json(buildStudyStats(getUserId(req)));
     })
   );
 

@@ -289,7 +289,16 @@ check('study summary counts the session only once', summary.totalMinutes === 25 
 
 await root.unmount();
 root = await renderAt('/analytics', 1800);
-check('analytics now reports the real study time', text().includes('25 মিনিট') && text().includes('1 দিন'));
+check(
+  'analytics now reports the real study time',
+  text().includes('25 মিনিট') && text().includes('1 দিন') && text().includes('শেষ ৭ দিন')
+);
+const studiedSubject = (await client('/api/sessions')).sessions.find((s) => s.endedAt)?.subjectName;
+check(
+  'analytics names the most studied subject from the timer data',
+  text().includes('সবচেয়ে বেশি পড়া subject') && text().includes(studiedSubject),
+  `expected ${studiedSubject}`
+);
 
 // clean up so the database goes back to a clean state
 for (const session of (await client('/api/sessions')).sessions) {

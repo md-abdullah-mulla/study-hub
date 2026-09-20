@@ -367,8 +367,20 @@ test('dashboard recommendation explains itself with real reasons', async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Phase 2 — Study Session Tracker
+// Phase 2 — Study Session Tracker + analytics
 // ---------------------------------------------------------------------------
+
+test('study analytics stay empty (not invented) before the first session', async () => {
+  const analytics = await get('/api/analytics');
+  assert.equal(analytics.status, 200);
+  assert.equal(analytics.body.totalMinutes, 0);
+  assert.equal(analytics.body.sessionCount, 0);
+  assert.equal(analytics.body.averageSessionMinutes, 0);
+  assert.equal(analytics.body.mostStudied, null, 'no session -> no "most studied subject"');
+  assert.equal(analytics.body.leastStudied, null);
+  assert.equal(analytics.body.last7Days.length, 7, 'the week chart always has 7 honest days');
+  assert.ok(analytics.body.last7Days.every((d) => d.minutes === 0));
+});
 
 test('starting a session on a topic marks it "studying" but never "completed"', async () => {
   const microcontroller = await findSubject('Microcontroller');
@@ -504,4 +516,40 @@ test('session validation and 404s are honest errors', async () => {
   assert.equal((await del('/api/sessions/999999')).status, 404);
   assert.equal((await post('/api/sessions', { topicId: 999999 })).status, 404);
   assert.equal((await post('/api/sessions', { subjectId: 'abc' })).status, 400);
+});
+
+
+test('analytics summarises the week, the average sitting and most/least studied', async () => {
+  const history = await get('/api/sessions');
+  const analytics = await get('/api/analytics');
+  assert.equal(analytics.status, 200);
+  const body = analytics.body;
+  const sessions = history.body.sessions;
+  const finished = sessions.filter((s) => s.endedAt);
+  const measured = finished.reduce((sum, s) => sum + s.durationMinutes, 0);
+  const minutesOf = (name) =>
+    finished.filter((s) => s.subjectName === name).reduce((sum, s) => sum + s.durationMinutes, 0);
+
+  assert.equal(body.totalMinutes, measured, 'the total is exactly what the timer stored');
+  assert.equal(body.weekMinutes, measured, 'every session so far is from today, so it is the week too');
+  assert.equal(body.todayMinutes, measured);
+  assert.equal(body.sessionCount, sessions.length, 'open sittings are counted as sessions too');
+  assert.equal(body.averageSessionMinutes, Math.round(measured / finished.length), 'average per finished sitting');
+  assert.equal(body.currentStreak, 1);
+
+  assert.equal(body.mostStudied.name, 'IoT & IoT Architecture', 'the subject with the most measured time');
+  assert.equal(body.mostStudied.minutes, minutesOf('IoT & IoT Architecture'));
+  assert.equal(body.leastStudied.minutes, 0, 'the least studied subject is an untouched one');
+  assert.equal(
+    body.bySubject.find((row) => row.subjectName === 'IoT & IoT Architecture').sharePercent,
+    Math.round((minutesOf('IoT & IoT Architecture') / measured) * 100),
+    'the share adds up to the real total'
+  );
+
+  assert.equal(body.last7Days.length, 7);
+  const today = body.last7Days[6];
+  assert.equal(today.isToday, true);
+  assert.equal(today.minutes, measured, 'today is the last bar of the week chart');
+  assert.equal(body.last7Days.slice(0, 6).every((d) => d.minutes === 0), true, 'earlier days are honest zeros');
+  assert.match(today.label, /^(রবি|সোম|মঙ্গল|বুধ|বৃহঃ|শুক্র|শনি)$/);
 });

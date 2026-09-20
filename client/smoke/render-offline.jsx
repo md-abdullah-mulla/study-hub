@@ -181,6 +181,16 @@ await root.unmount();
 root = await renderAt('/study', 1800);
 check('finished session shows its real 30 minutes offline', text().includes('30 মিনিট') && text().includes('revision দরকার'));
 
+await root.unmount();
+root = await renderAt('/analytics', 1800);
+check(
+  'offline analytics draws the 7-day study chart and most/least studied',
+  text().includes('শেষ ৭ দিন') && text().includes('সবচেয়ে বেশি পড়া subject') && text().includes('সবচেয়ে কম পড়া subject')
+);
+
+await root.unmount();
+root = await renderAt('/study', 1800);
+
 const offlineSummary = await api('/sessions');
 check(
   'study time feeds today + streak with no server',
