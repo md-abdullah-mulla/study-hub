@@ -3,6 +3,7 @@ import { Download, Database, Info, FileSpreadsheet, RotateCcw, Loader2 } from 'l
 import { Card, CardHeader, StatCard } from '../components/ui/index.jsx';
 import { useAppData } from '../state/AppDataContext.jsx';
 import AutoBackupCard from '../components/backup/AutoBackupCard.jsx';
+import { InstallAppCard } from '../components/pwa/InstallAppCard.jsx';
 import { useToast } from '../state/ToastContext.jsx';
 import { api } from '../api/client.js';
 import { downloadFromApi } from '../browser-db/download.js';
@@ -105,6 +106,8 @@ export default function SettingsPage() {
       </Card>
 
       <AutoBackupCard />
+
+      <InstallAppCard />
 
       <Card>
         <CardHeader title="Student name" subtitle="PDF report-এর উপরে তোমার নামটা দেখাবে" icon={Info} />

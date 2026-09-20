@@ -1,0 +1,84 @@
+{
+  "name": "study-hub-desktop",
+  "productName": "Study Hub",
+  "version": "1.0.0",
+  "description": "Study Hub \u2014 Smart Semester Study Management System (Diploma in CST, Semester 6) for the desktop, offline.",
+  "main": "main.cjs",
+  "author": {
+    "name": "Md Abdullah Mulla",
+    "email": "188435987+md-abdullah-mulla@users.noreply.github.com"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "prepare-app": "node scripts/prepare-app.mjs",
+    "start": "npm run prepare-app && electron .",
+    "pack": "npm run prepare-app && electron-builder --dir",
+    "dist:linux": "npm run prepare-app && electron-builder --linux AppImage deb",
+    "dist:win": "npm run prepare-app && electron-builder --win nsis portable",
+    "dist:mac": "npm run prepare-app && electron-builder --mac dmg"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.studyhub.semester6",
+    "productName": "Study Hub",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "package.json",
+      "app/**/*"
+    ],
+    "extraMetadata": {
+      "description": "Smart Semester Study Management System \u2014 Diploma in CST, Semester 6. Runs fully offline."
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Education",
+      "icon": "build/icon.png",
+      "synopsis": "Semester study manager \u2014 track, analyse, revise (offline)",
+      "desktop": {
+        "Name": "Study Hub",
+        "Comment": "Semester 6 study manager \u2014 progress, exam mode, analytics",
+        "Categories": "Education;Office;"
+      },
+      "maintainer": "Md Abdullah Mulla <188435987+md-abdullah-mulla@users.noreply.github.com>"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Study Hub"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.education",
+      "icon": "build/icon.png"
+    }
+  },
+  "homepage": "https://study-hub-virid.vercel.app/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/md-abdullah-mulla/study-hub.git"
+  }
+}

@@ -1,14 +1,17 @@
 # 🎓 Smart Semester Study Management System
 
-### 🌐 Live app
+### 🌐 Live app · 📱 installable App · 🖥️ Desktop app
 
-| Host | Link |
+| কী | লিংক / কোথায় |
 |---|---|
-| Vercel | **https://study-hub-virid.vercel.app/** |
-| GitHub Pages | **https://md-abdullah-mulla.github.io/study-hub/** |
+| ওয়েবসাইট (Vercel) | **https://study-hub-virid.vercel.app/** |
+| ওয়েবসাইট (GitHub Pages) | **https://md-abdullah-mulla.github.io/study-hub/** |
+| **App version** | ওয়েবসাইট খুলে **Settings → App হিসেবে ইনস্টল করো** (অ্যাপ আইকন হোম স্ক্রিনে/Start menu-তে) |
+| **Desktop app** | GitHub → **Releases** (`Study Hub-1.0.0.AppImage`, `study-hub-desktop_1.0.0_amd64.deb`) — বিস্তারিত `docs/desktop-app-bn.md` |
 
-Both run the whole backend (SQLite compiled to WebAssembly) inside the browser, so the app works
-with no server — and offline once loaded.
+All three run the whole backend (SQLite compiled to WebAssembly) inside the app, so nothing needs a
+server — and everything keeps working offline. The installed app and the desktop app ship the fonts
+with them, so they never contact any third-party server.
 
 GitHub Pages-এ deploy করা version সম্পূর্ণ server-ছাড়া চলে — SQLite (WebAssembly) ব্রাউজারেই চলে,
 তাই ফোন/ল্যাপটপ থেকে যেকোনো সময় খুলতে পারবে। ডেটা সেই ব্রাউজারের **IndexedDB**-তে জমা থাকে
@@ -268,6 +271,8 @@ table, API আর UI-এর জায়গা আগে থেকেই রা�
 | `cd client && npm run test:browser` | ব্রাউজার-mode backend: seed, progress maths, exam clock, CRUD, reload-এর পর data ফিরে আসা | ✅ 12/12 |
 | `cd client && npm run smoke:offline` | **server ছাড়া** পুরো UI (jsdom + sql.js) — live app যা করে ঠিক তাই | ✅ 63/63 |
 | `node tools/browser-check.mjs <url>` | **আসল Chromium-এ deployed app**: প্রতিটা screen, dashboard → topic → Exam Mode → analytics → PDF → backup, ফোন layout (Playwright লাগে, app-এর dependency নয়) | ✅ 38/38 |
+| `node tools/pwa-check.mjs <url>` | **App version**: manifest/installability, আইকন, service worker, ইন্টারনেট বন্ধ করে পুরো অ্যাপ + deep link + data save | ✅ 13/13 |
+| `node tools/desktop-check.mjs 9222` | **ডেস্কটপ অ্যাপ** (আসল Electron window): app:// address, preload bridge, ১২টা screen, শূন্য network request, data reload-এর পরও থাকে | ✅ 23/23 (source + AppImage) |
 | `cd client && npm run lint` | oxlint (React hooks rules) | ✅ 0 warning |
 | `cd client && npm run build` | production build | ✅ |
 
@@ -281,6 +286,29 @@ Test রা তোমার আসল data ছুঁয়ে দেখে ন�
 ---
 
 ## ☁️ Deploy (live link বানানোর নিয়ম)
+
+### 📱 App version বানানো / আপডেট করা
+
+App version আলাদা কিছু নয় — শুধু manifest + service worker + আইকন (সব `client/public/`-এ),
+তাই ওয়েবসাইট deploy করলেই app version-ও আপডেট হয়ে যায়। বদলাতে হলে:
+
+```bash
+python3 tools/make-icons.py            # আইকন বদলাতে চাইলে (ব্র্যান্ড রঙ tools/make-icons.py-তে)
+cd client && node scripts/fetch-fonts.mjs   # ফন্ট refresh করতে চাইলে (একবারই দরকার)
+cd client && npm run build             # sw.js-এ নতুন build stamp বসবে → ইনস্টল করা অ্যাপ
+                                       #   "নতুন version এসেছে" banner দেখাবে
+```
+
+### 🖥️ Desktop app বানানো
+
+```bash
+cd client && npm run build:desktop     # ওয়েব অ্যাপ → dist-desktop
+cd ../desktop && npm install
+npm start                              # চালিয়ে দেখো (electron window)
+npm run dist:linux                     # AppImage + deb  → desktop/release/
+```
+
+পূর্ণ নির্দেশনা, ডেটা কোথায় থাকে, আর কেন `file://` নয় `app://` — `docs/desktop-app-bn.md`।
 
 ### সবচেয়ে সহজ — Render (এক service, UI + API একসাথে)
 

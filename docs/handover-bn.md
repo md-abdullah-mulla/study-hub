@@ -4,8 +4,10 @@
 
 | হোস্ট | লিংক | কেমন |
 |---|---|---|
-| **Vercel** (নতুন) | **https://study-hub-virid.vercel.app/** | মূল ডোমেইনে (`/`), `/report`, `/exam`, `/analytics` deep link সরাসরি খোলে |
+| **Vercel** | **https://study-hub-virid.vercel.app/** | মূল ডোমেইনে (`/`), `/report`, `/exam`, `/analytics` deep link সরাসরি খোলে |
 | **GitHub Pages** | **https://md-abdullah-mulla.github.io/study-hub/** | `/study-hub/` path-এ, SPA fallback (404.html) দিয়ে deep link খোলে |
+| **📱 App version** | ওয়েবসাইট → Settings → “App হিসেবে ইনস্টল করো” | হোম স্ক্রিনে/Start menu-তে আইকন, ইন্টারনেট ছাড়াও চলে |
+| **🖥️ Desktop app** | GitHub → **Releases** (`.AppImage` / `.deb`) | পিসিতে আলাদা অ্যাপ, ব্রাউজার/সার্ভার/ইন্টারনেট কিছুই লাগে না |
 
 দুই জায়গায় একই অ্যাপ — data ব্রাউজারের ভিতরেই (SQLite → WebAssembly) থাকে, তাই কোনো
 সার্ভার বা ডেটাবেস হোস্টিং লাগে না, আর ইন্টারনেট ছাড়াও চলে।
@@ -198,6 +200,8 @@ topic-এর বাইরের প্রশ্ন কখনো আসে না
 | Browser-mode backend test (sql.js) | ✅ 12/12 |
 | **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 63/63 |
 | Server-mode full UI smoke (timer + analytics + quiz + illustration + study content + exam + report + backup সহ) | ✅ 132/132 |
+| **App (PWA) check — আসল Chrome-এ installed app: manifest, আইকন, service worker, internet বন্ধ করে অ্যাপ + deep link + data save** | ✅ 13/13 |
+| **Desktop app check — আসল Electron window: app://, preload bridge, ১২টা screen, ০ network request, data reload-এর পরও থাকে** | ✅ 23/23 (source + AppImage) |
 | **Real-browser check (Chromium-এ deployed app)** | ✅ 38/38 (Vercel + Pages) |
 | ৭৭ topic-এর content mapping sweep (cross-subject bleed) | ✅ 0 bleed, 0 draft |
 | oxlint | ✅ 0 warning, 0 error (80 files) |
@@ -271,6 +275,28 @@ root-এর `vercel.json`-এ সব সেট করা আছে: `installComm
 
 পুরোনো লিংক: https://study-3z7ek92ux-md-abdullah-mullas-projects.vercel.app (alias)
 
+
+---
+
+## 📱 App version (PWA) আর 🖥️ Desktop app — একই অ্যাপ, তিন জায়গায়
+
+তিনটাই **একই কোড**: React UI + পুরো backend + SQLite (WebAssembly-তে) — তাই কোথাও সার্ভার
+বা আলাদা database লাগে না।
+
+| জিনিস | ফাইল | কেন দরকার |
+|---|---|---|
+| App install | `client/public/manifest.webmanifest` | ব্রাউজারকে বলে এটা একটা অ্যাপ (Bangla নাম, standalone, maskable আইকন) |
+| Offline | `client/public/sw.js` | অ্যাপের copy রেখে দেয় → internet ছাড়াও খোলে। প্রতিটি build-এ `__BUILD__` stamp বদলায়, তাই পুরোনো cache নিজে পরিষ্কার হয় |
+| আইকন | `client/public/icons/*` + `favicon.ico` | `tools/make-icons.py` ব্র্যান্ড রঙে বানায় (cap + rising bars), `desktop/build/icon.png`-ও এখান থেকেই |
+| ইনস্টল UI | `client/src/components/pwa/InstallAppCard.jsx` (Settings-এ) | যেখানে সত্যিই ইনস্টল বাটন আছে সেখানে সেটা, নাহলে device-ভিত্তিক ধাপ; iOS-এ সৎভাবে শুধু ধাপ (ওখানে prompt নেই) |
+| নতুন version | `client/src/components/pwa/UpdateBanner.jsx` | নতুন build এলে "নতুন version এসেছে → Reload" |
+| ফন্ট | `client/public/fonts/` (`client/scripts/fetch-fonts.mjs`) | ফন্ট অ্যাপের সাথে থাকে → **কোনো third-party request নেই**, ডেস্কটপ অ্যাপে ০ network request |
+| ডেস্কটপ shell | `desktop/main.cjs`, `desktop/preload.cjs` | `app://study-hub/` scheme-এ বিল্ট অ্যাপ serve করে, মেনু (Ctrl+1…5), window state, single instance |
+| ইনস্টলার | `desktop/release/` (`npm run dist:linux`) | AppImage + deb (উইন্ডোজ/ম্যাকের কমান্ড `docs/desktop-app-bn.md`-তে) |
+
+সত্যি কথা: ওয়েবসাইট, ফোনে ইনস্টল করা অ্যাপ আর ডেস্কটপ অ্যাপে **ডেটা আলাদা জায়গায়** থাকে
+(প্রत्येकের নিজের storage) — তাই **Settings → Backup (JSON)** দিয়ে এক জায়গা থেকে আরেক জায়গায়
+নেওয়া যায় (Auto Backup-এর snapshot-ও আছে)।
 
 ---
 

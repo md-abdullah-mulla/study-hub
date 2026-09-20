@@ -15,7 +15,9 @@
     "preview:pages": "vite preview --outDir dist --port 4173 --strictPort",
     "test:browser": "node --import ./test/register-alias.mjs --test test/*.test.mjs",
     "smoke:offline": "node smoke/build-offline.mjs && node smoke/out-offline.mjs",
-    "build:vercel": "vite build --mode vercel"
+    "build:vercel": "vite build --mode vercel",
+    "build:desktop": "vite build --mode desktop",
+    "preview:desktop": "vite preview --outDir dist-desktop --port 4175 --strictPort"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",

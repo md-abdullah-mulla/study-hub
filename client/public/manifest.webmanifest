@@ -1,0 +1,77 @@
+{
+  "name": "Study Hub — Smart Semester Study Management",
+  "short_name": "Study Hub",
+  "description": "Diploma in CST, Semester 6 — পড়াশোনা track, analyse ও revise করার personal app। ইন্টারনেট ছাড়াও চলে।",
+  "lang": "bn",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "id": "study-hub-semester-6",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#eef4ff",
+  "theme_color": "#2554e0",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ড্যাশবোর্ড",
+      "short_name": "ড্যাশবোর্ড",
+      "url": "./"
+    },
+    {
+      "name": "Exam Mode",
+      "short_name": "Exam",
+      "url": "exam"
+    },
+    {
+      "name": "Analytics",
+      "short_name": "Analytics",
+      "url": "analytics"
+    },
+    {
+      "name": "PDF Report",
+      "short_name": "Report",
+      "url": "report"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# the built web app is copied in by scripts/prepare-app.mjs — never committed
+app/
+# electron-builder output
+release/
+node_modules/

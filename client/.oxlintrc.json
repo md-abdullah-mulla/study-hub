@@ -28,6 +28,7 @@
   ],
   "ignorePatterns": [
     "dist/**",
+    "dist-desktop/**",
     "smoke/out*.mjs",
     "smoke/dbg*",
     "node_modules/**",

@@ -3,6 +3,7 @@ import ReactDOMClient from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import { env, isLocalApiMode } from './lib/env.js';
+import { registerServiceWorker } from './lib/pwa.js';
 import './index.css';
 
 /**
@@ -59,6 +60,12 @@ function renderRecoveryScreen(errorMessage) {
 }
 
 async function start() {
+  // App version: keep a copy of the app itself, so the installed app opens
+  // instantly and works with no internet. The "new version ready" banner is
+  // handled by UpdateBanner (it calls registerServiceWorker itself); here we
+  // only make sure the worker is registered even if that component never mounts.
+  registerServiceWorker();
+
   if (isLocalApiMode) {
     const { installLocalApi } = await import('./browser-db/localApi.js');
     const local = await installLocalApi();

@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar.jsx';
 import { BottomNav } from './BottomNav.jsx';
 import { TopBar } from './TopBar.jsx';
 import { SearchDialog } from '../search/SearchDialog.jsx';
+import { UpdateBanner } from '../pwa/UpdateBanner.jsx';
 import { NAV_ITEMS } from './navItems.js';
 import { Modal, Spinner } from '../ui/index.jsx';
 import { useAppData } from '../../state/AppDataContext.jsx';
@@ -81,6 +82,9 @@ export function AppLayout() {
       </div>
 
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
+
+      {/* app version: offers a one-tap reload when a new build is deployed */}
+      <UpdateBanner />
 
       <Modal open={menuOpen} title="মেনু" onClose={() => setMenuOpen(false)} size="sm">
         <div className="grid grid-cols-2 gap-2">
