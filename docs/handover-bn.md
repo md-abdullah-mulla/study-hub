@@ -39,10 +39,11 @@ service, repository ফাইলগুলোই ব্রাউজারে চ�
 | **Progress** — শুধু topic complete থেকে হিসাব (topic → chapter → subject → semester), কখনো হাতে বানানো যায় না | ✅ সম্পূর্ণ |
 | **Revision** — Learned → Revision 1 → Revision 2 → Final, last/next date, "Revision Due" ব্যাজ, এক ক্লিকে done | ✅ সম্পূর্ণ |
 | **Notes** — personal notes (topic-wise), খোঁজা যায় | ✅ সম্পূর্ণ |
-| **Analytics** — basic statistics | ✅ চলছে |
+| **Analytics** — basic statistics + আসল Study Time (timer থেকে) | ✅ চলছে |
 | **Global Search** (`Ctrl/Cmd + K`) — subject, chapter, topic, note, question | ✅ সম্পূর্ণ |
 | **Settings / Backup** — JSON backup + snapshot, CSV export, data reset | ✅ সম্পূর্ণ (server ছাড়াও) |
-| **Study (timer session)**, **Quiz**, **AI Assistant** | ⏳ Phase 2/3/4 — "Coming soon" পেজে কী আসবে লেখা আছে |
+| **Study Session (timer)** — শুরু → টাইমার → শেষে আসল সময় + confidence + নোট + "revision দরকার" ফ্ল্যাগ, আজ/মোট/streak, সেশনের ইতিহাস | ✅ **নতুন (Phase 2)** |
+| **Quiz**, **AI Assistant** | ⏳ Phase 3/4 — "Coming soon" পেজে কী আসবে লেখা আছে |
 
 Semester-এর শুরুতে দেওয়া structure-টাই লোড করা আছে: **৫ subject / ১৩ chapter / ৭৭ topic**
 (Computer Network, IoT & IoT Architecture, DBMS, Microcontroller, Security-Based Surveillance System)।
@@ -53,10 +54,10 @@ Semester-এর শুরুতে দেওয়া structure-টাই লো
 
 | Test | ফল |
 |---|---|
-| Server API test (Node-এ) | ✅ 18/18 |
+| Server API test (Node-এ) | ✅ 24/24 |
 | Browser-mode backend test (sql.js) | ✅ 6/6 |
-| Server-mode full UI smoke | ✅ 39/39 |
-| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 23/23 |
+| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 29/29 |
+| Server-mode full UI smoke (timer সহ) | ✅ 46/46 |
 | oxlint | ✅ 0 warning, 0 error |
 | Production + Pages build | ✅ ঠিকঠাক |
 
