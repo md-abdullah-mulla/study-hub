@@ -13,9 +13,31 @@
 
 | | |
 | --- | --- |
+| | |
+| --- | --- |
 | Repo | https://github.com/md-abdullah-mulla/study-hub |
 | Stack | React 19 + Vite + Tailwind · Node 20 + Express · SQLite · Recharts |
 | Status | Phase 1 (MVP) complete — 16 backend tests + 38 end-to-end UI checks passing |
+
+<!-- CI badge: নিচের line-টা uncomment করো যখন docs/github-actions-ci.yml কে
+     .github/workflows/ci.yml হিসেবে যোগ করবে (GitHub UI → Add file অথবা
+     `workflow` scope সহ token দিয়ে push) -->
+<!-- [![CI](https://github.com/md-abdullah-mulla/study-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/md-abdullah-mulla/study-hub/actions/workflows/ci.yml) -->
+
+> **CI চালু করার ৩০ সেকেন্ডের কাজ:** `docs/github-actions-ci.yml` ফাইলটার content কপি করে GitHub-এ
+> `.github/workflows/ci.yml` নামে নতুন file বানিয়ে paste করো (Add file → Create new file)।
+> তখন প্রতি push-এ test + lint + build automatic চলবে। (Token-এ `workflow` scope না থাকায় এটা আমি
+> সরাসরি push করতে পারিনি।)
+
+### Live link (one click)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/md-abdullah-mulla/study-hub)
+
+উপরে চাপলে Render তোমাকে GitHub দিয়ে login করাবে, তারপর `render.yaml` পড়ে **একটা service** বানিয়ে
+পুরো app (UI + API) deploy করে দেবে — কোনো configuration লাগবে না। বিস্তারিত নিচে “Deploy” section-এ।
+
+> ⚠️ Render free plan-এ disk ephemeral: প্রতিবার deploy-এ progress reset হবে। স্থায়ী data চাইলে persistent
+> disk (paid) অথবা নিজের PC/ডকারে চালাও — `render.yaml`-তে `disk:` অংশ uncomment করলেই হবে।
 
 ---
 
