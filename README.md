@@ -263,12 +263,18 @@ table, API আর UI-এর জায়গা আগে থেকেই রা�
 
 | Command | কী চেক করে | ফল |
 | --- | --- | --- |
-| `cd server && npm test` | 16টা API/business-logic test: percentage maths, revision schedule, import parsing, search, plan, export, validation | ✅ 16/16 |
-| `cd client && npm run smoke` | আসল app jsdom-এ render করে ৩৮টা interaction চালায় (status toggle, note লেখা, plan tick, import paste, search, offline error, retry) — **আগে `cd server && npm start` চালু থাকতে হবে** | ✅ 38/38 |
-| `cd client && npm run test:browser` | ব্রাউজার-mode backend: seed, progress maths, CRUD, import, export, reload-এর পর data ফিরে আসা, fetch bridge | ✅ 6/6 |
-| `cd client && npm run smoke:offline` | **server ছাড়া** পুরো UI (jsdom + sql.js) — live app যা করে ঠিক তাই | ✅ 23/23 |
+| `cd server && npm test` | API/business-logic: percentage maths, revision schedule, import parsing, search, plan, export, backup, exam, content mapping, byte helpers | ✅ 58/58 |
+| `cd client && npm run smoke` | আসল app jsdom-এ render করে ১৩২টা interaction চালায় (status toggle, note, plan tick, quiz, illustration, Study Content, Exam Mode, analytics, report, backup) — **আগে `cd server && npm start` চালু থাকতে হবে** | ✅ 132/132 |
+| `cd client && npm run test:browser` | ব্রাউজার-mode backend: seed, progress maths, exam clock, CRUD, reload-এর পর data ফিরে আসা | ✅ 12/12 |
+| `cd client && npm run smoke:offline` | **server ছাড়া** পুরো UI (jsdom + sql.js) — live app যা করে ঠিক তাই | ✅ 63/63 |
+| `node tools/browser-check.mjs <url>` | **আসল Chromium-এ deployed app**: প্রতিটা screen, dashboard → topic → Exam Mode → analytics → PDF → backup, ফোন layout (Playwright লাগে, app-এর dependency নয়) | ✅ 38/38 |
 | `cd client && npm run lint` | oxlint (React hooks rules) | ✅ 0 warning |
 | `cd client && npm run build` | production build | ✅ |
+
+**কেন jsdom smoke যথেষ্ট নয়:** jsdom Node-এর ভিতরে চলে, তাই `Buffer`-এর মতো global সেখানে
+আছে — কিন্তু deployed app-এ (Vercel/offline mode) backend ব্রাউজারে চলে, যেখানে ওগুলো নেই।
+এই পার্থক্যেই একটা আসল bug লুকিয়ে ছিল (backup `Buffer is not defined` দিয়ে ভাঙছিল শুধু লাইভ
+সাইটে) — তাই শেষ ধাপে `tools/browser-check.mjs` দিয়ে আসল ব্রাউজারে পুরো app যাচাই করা হয়।
 
 Test রা তোমার আসল data ছুঁয়ে দেখে না: backend test একটা temp database-এ চলে, আর smoke test শেষে progress আবার `not started`-এ ফিরিয়ে দেয়।
 

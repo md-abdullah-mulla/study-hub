@@ -343,6 +343,14 @@ test('partial updates only touch the fields that were sent', async () => {
   assert.equal(subject.body.color, tree.body.subjects[0].color);
 });
 
+test('dashboard stats carry the streak numbers the UI shows', async () => {
+  const dash = await get('/api/dashboard');
+  assert.equal(dash.status, 200);
+  assert.equal(typeof dash.body.stats.currentStreak, 'number');
+  assert.equal(typeof dash.body.stats.longestStreak, 'number', 'the "সেরা: X দিন" hint needs a number');
+  assert.ok(dash.body.stats.longestStreak >= dash.body.stats.currentStreak, 'best can never be below current');
+});
+
 test('exports work: JSON backup and CSV of all topics', async () => {
   const backup = await get('/api/export/backup');
   assert.equal(backup.status, 200);

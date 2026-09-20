@@ -33,8 +33,16 @@ export function OverallProgressCard({ overall, stats }) {
           <StatCard label="Total Chapter" value={overall.totalChapters} hint={`${overall.completedChapters}টি শেষ`} />
           <StatCard label="Complete Topic" value={overall.completedTopics} tone="success" hint={`${overall.totalTopics}টির মধ্যে`} />
           <StatCard label="Revision Due" value={overall.revisionDueCount} tone={overall.revisionDueCount ? 'warn' : 'default'} />
-          <StatCard label="মোট Study Time" value={minutesLabel(stats.totalStudyMinutes)} hint="Phase 2-এ timer আসছে" />
-          <StatCard label="Study Streak" value={`${stats.currentStreak} দিন`} hint={`সেরা: ${stats.longestStreak} দিন`} />
+          <StatCard
+            label="মোট Study Time"
+            value={minutesLabel(stats.totalStudyMinutes)}
+            hint={stats.todayStudyMinutes ? `আজ ${minutesLabel(stats.todayStudyMinutes)}` : 'Session শুরু করলে এখানে জমা হবে'}
+          />
+          <StatCard
+            label="Study Streak"
+            value={`${stats.currentStreak ?? 0} দিন`}
+            hint={`সেরা: ${stats.longestStreak ?? 0} দিন`}
+          />
         </div>
       </div>
 

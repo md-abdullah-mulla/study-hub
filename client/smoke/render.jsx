@@ -149,6 +149,8 @@ check("dashboard shows today's plan", page.includes("Today's Target"));
 check('dashboard shows recommendation with reasons', page.includes('Why this is recommended?'));
 check('dashboard shows counters: 77 topics / 13 chapters', page.includes('0 / 77 topic complete') && page.includes('13'));
 check('dashboard shows revision + activity sections', page.includes('Revision Due') && page.includes('Recent Activity'));
+check('dashboard streak card shows a real best value (never "undefined")', /সেরা: \d+ দিন/.test(page), page.match(/সেরা:[^|]{0,20}/)?.[0] ?? 'not found');
+check('nothing on the dashboard prints "undefined"', !page.includes('undefined'), page.slice(0, 200));
 
 // ================================================================ 2. PLAN TICK
 const firstPlanCheckbox = document.querySelector('button[aria-label="Done"]');

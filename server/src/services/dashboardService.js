@@ -48,6 +48,9 @@ export function buildDashboard(userId, { planDate = todayLocalDate() } = {}) {
       totalStudyMinutes: stats.totalMinutes,
       todayStudyMinutes: stats.todayMinutes,
       currentStreak: stats.currentStreak,
+      // the dashboard shows "সেরা: X দিন" next to the streak — without this the
+      // card printed "undefined" (the analytics page already had it)
+      longestStreak: stats.longestStreak,
     },
     subjects: subjects.map((s) => ({
       id: s.id,

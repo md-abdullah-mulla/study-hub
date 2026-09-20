@@ -194,11 +194,13 @@ topic-এর বাইরের প্রশ্ন কখনো আসে না
 
 | Test | ফল |
 |---|---|
-| Server API test (Node-এ) | ✅ 56/56 |
+| Server API test (Node-এ) | ✅ 58/58 |
 | Browser-mode backend test (sql.js) | ✅ 12/12 |
 | **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 63/63 |
-| Server-mode full UI smoke (timer + analytics + quiz + illustration + study content + exam + report + backup সহ) | ✅ 130/130 |
-| oxlint | ✅ 0 warning, 0 error (78 files) |
+| Server-mode full UI smoke (timer + analytics + quiz + illustration + study content + exam + report + backup সহ) | ✅ 132/132 |
+| **Real-browser check (Chromium-এ deployed app)** | ✅ 38/38 (Vercel + Pages) |
+| ৭৭ topic-এর content mapping sweep (cross-subject bleed) | ✅ 0 bleed, 0 draft |
+| oxlint | ✅ 0 warning, 0 error (80 files) |
 | Production + Pages + Vercel build | ✅ ঠিকঠাক (`dist/`, `dist-vercel/`) |
 
 যাচাই করা হয়েছে: দুই হোস্টেই HTML, JS chunks, CSS, WASM **সবগুলো 200 OK** (lazy chunk সহ),
@@ -206,6 +208,31 @@ deep link (`/report`, `/exam`, `/analytics`, `/subjects/1`) সরাসরি �
 অবিকল আমার নিজে rebuild করা bundle-এর সাথে মিলছে, আর bundle-এ নতুন feature (Exam Mode,
 Report, Advanced Analytics, Auto Backup) আছে এবং কোনো AI API-র ঠিকানা (`openai`, `gemini`,
 `anthropic`) নেই।
+
+---
+
+## 🧪 আসল ব্রাউজারে যাচাই (`tools/browser-check.mjs`)
+
+jsdom smoke Node-এর ভিতরে চলে, তাই সেখানে `Buffer`-এর মতো global আছে — কিন্তু deployed app-এ
+backend ব্রাউজারে চলে, যেখানে নেই। এই পার্থক্যের কারণেই দুটো bug শুধু **লাইভ সাইটে** ধরা পড়েছিল:
+
+| Bug | কারণ | এখন |
+|---|---|---|
+| Backup ভাঙা (`Buffer is not defined`) | `backupRepo` সাইজ মাপতে `Buffer.byteLength` ব্যবহার করত | `server/src/utils/bytes.js` → `TextEncoder` (Node + ব্রাউজার দুই জায়গাতেই চলে) |
+| Dashboard-এ "সেরা: undefined দিন" | UI `stats.longestStreak` পড়ত, কিন্তু dashboard API সেটা পাঠাত না | `dashboardService` এখন পাঠায় + UI-তে `?? 0` fallback |
+
+তাই শেষ ধাপে সবসময় আসল ব্রাউজারে চালাও:
+
+```bash
+mkdir -p /tmp/qa && cd /tmp/qa && npm init -y && npm i playwright && npx playwright install chromium
+PLAYWRIGHT_HOME=/tmp/qa node ~/study-hub/tools/browser-check.mjs https://study-hub-virid.vercel.app/
+```
+
+এটা প্রতিটা screen খুলে দেখে কোনো জায়গায় `undefined`/`NaN`/`[object Object]` ছাপে কি না, dashboard →
+subject → chapter → topic navigation, topic complete করে reload দিয়ে **data সত্যিই থাকছে কি না**,
+topic content নিজের subject-এর কি না, Exam Mode পুরোটা (start → উত্তর → next → submit → result),
+analytics card + chart, PDF report-এর সব section + print, Backup Now, আর ফোন layout — সাথে console
+error-ও গোনে। Playwright app-এর dependency নয় (package.json-এ যোগ করা নেই)।
 
 ---
 
