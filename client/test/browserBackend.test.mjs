@@ -157,6 +157,73 @@ test('data survives a reload: bytes are persisted and restored', async () => {
   assert.equal(restored.subjects.length, 5);
 });
 
+test('browser mode: quizzes, timer sessions and study analytics work with no server', async () => {
+  const backend = await createBrowserBackend({ SQL, schemaSql });
+
+  const tree = json(await backend.handle({ path: '/api/progress-tree' }));
+  const subject = tree.subjects.find((s) => s.name.startsWith('IoT'));
+  const chapter = subject.chapters[0];
+  const topic = chapter.topics[0];
+
+  // ---- a quiz with one auto-graded and one written question ----------------
+  const quiz = json(await backend.handle({
+    method: 'POST',
+    path: '/api/quizzes',
+    body: { chapterId: chapter.id, title: 'Browser quiz' },
+  }));
+  assert.equal(quiz.questionCount, 0);
+
+  await backend.handle({
+    method: 'POST',
+    path: `/api/quizzes/${quiz.id}/questions`,
+    body: { type: 'mcq', topicId: topic.id, question: 'q1', options: ['a', 'b'], correctAnswer: 'b' },
+  });
+  const written = json(await backend.handle({
+    method: 'POST',
+    path: `/api/quizzes/${quiz.id}/questions`,
+    body: { type: 'viva', topicId: topic.id, question: 'viva question' },
+  }));
+
+  const hidden = json(await backend.handle({ path: `/api/quizzes/${quiz.id}` }));
+  assert.equal(hidden.questions[0].correctAnswer, undefined, 'answers are hidden until the attempt is submitted');
+
+  const attempt = json(await backend.handle({
+    method: 'POST',
+    path: `/api/quizzes/${quiz.id}/attempt`,
+    body: { answers: [{ questionId: hidden.questions[0].id, answer: 'B' }, { questionId: written.id, answer: 'লেখা' }] },
+  }));
+  assert.equal(attempt.result.score, 1, 'only the MCQ is graded automatically');
+  assert.equal(attempt.result.accuracy, 50);
+  assert.equal(attempt.unmarkedQuestionIds.length, 1);
+
+  const marked = json(await backend.handle({
+    method: 'PATCH',
+    path: `/api/quiz-results/${attempt.result.id}/self-mark`,
+    body: { marks: [{ questionId: written.id, selfScore: 0.5 }] },
+  }));
+  assert.equal(marked.result.score, 1.5, 'the student own marking is what counts');
+  assert.equal(marked.result.accuracy, 75);
+
+  const weak = json(await backend.handle({ path: '/api/quiz-results/weak-topics' }));
+  assert.equal(weak.weakTopics.length, 0, '75% in the only topic is not weak');
+
+  // ---- the study timer + analytics run on the same in-page database --------
+  const started = json(await backend.handle({ method: 'POST', path: '/api/sessions', body: { topicId: topic.id } }));
+  const finished = json(await backend.handle({
+    method: 'PATCH',
+    path: `/api/sessions/${started.id}`,
+    body: { durationMinutes: 40, confidence: 3, revisionNeeded: true },
+  }));
+  assert.equal(finished.durationMinutes, 40);
+
+  const analytics = json(await backend.handle({ path: '/api/analytics' }));
+  assert.equal(analytics.totalMinutes, 40);
+  assert.equal(analytics.todayMinutes, 40);
+  assert.equal(analytics.currentStreak, 1);
+  assert.equal(analytics.mostStudied.name.startsWith('IoT'), true);
+  assert.equal(analytics.last7Days[6].minutes, 40);
+});
+
 test('the fetch bridge answers /api locally and leaves other URLs alone', async () => {
   const backend = await createBrowserBackend({ SQL, schemaSql });
 

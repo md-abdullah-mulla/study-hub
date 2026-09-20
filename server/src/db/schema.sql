@@ -213,6 +213,23 @@ CREATE INDEX IF NOT EXISTS idx_results_quiz ON quiz_results(quiz_id, taken_at);
 -- ---------------------------------------------------------------------
 -- Today's study plan (Dashboard) — auto generated, user editable
 -- ---------------------------------------------------------------------
+-- One row per answered question. Storing the answers (not just the total score)
+-- is what makes "weak topic" a measured fact instead of a guess.
+CREATE TABLE IF NOT EXISTS quiz_answers (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  result_id   INTEGER NOT NULL REFERENCES quiz_results(id) ON DELETE CASCADE,
+  question_id INTEGER REFERENCES quiz_questions(id) ON DELETE SET NULL,
+  topic_id    INTEGER REFERENCES topics(id) ON DELETE SET NULL,
+  answer      TEXT,
+  is_correct  INTEGER NOT NULL DEFAULT 0,
+  awarded     REAL    NOT NULL DEFAULT 0,
+  max_points  REAL    NOT NULL DEFAULT 1,
+  self_graded INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_quiz_answers_result ON quiz_answers(result_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_answers_topic  ON quiz_answers(topic_id);
+
 CREATE TABLE IF NOT EXISTS study_plan_items (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

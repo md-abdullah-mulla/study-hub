@@ -112,6 +112,14 @@ async function resetProgressFromSeed() {
     if (subject.name.startsWith('QA ')) await client(`/api/subjects/${subject.id}`, 'DELETE');
   }
 
+  // The smoke test owns this dev database: it clears quizzes (and with them the
+  // attempts) so the "empty and honest" checks mean something. An interrupted
+  // run, or a quiz made by hand while poking at the API, would otherwise hide
+  // the empty state and the 0% accuracy.
+  for (const quiz of (await client('/api/quizzes')).quizzes) {
+    await client(`/api/quizzes/${quiz.id}`, 'DELETE');
+  }
+
   // sessions from an earlier run would skew the study-time numbers
   const sessions = await client('/api/sessions');
   for (const session of sessions.sessions) await client(`/api/sessions/${session.id}`, 'DELETE');
@@ -309,9 +317,94 @@ await root.unmount();
 root = await renderAt('/settings');
 check('settings offers JSON backup + CSV export', text().includes('Backup (JSON)') && text().includes('Topic list (CSV)'));
 
+// ================================================================ 12. QUIZ (Phase 3)
 await root.unmount();
-root = await renderAt('/quiz');
-check('phase-3 screen is an honest placeholder', text().includes('Phase 3') && text().includes('এখনো তৈরি হয়নি'));
+root = await renderAt('/quiz', 1800);
+page = text();
+check(
+  'quiz screen starts empty and honest',
+  page.includes('এখনো কোনো quiz নেই') && page.includes('এখনো quiz দাওনি'),
+  page.slice(0, 300)
+);
+check('quiz summary shows an honest 0% before any attempt', page.includes('Average Accuracy') && page.includes('0%'));
+
+// create a quiz through the real API, then check the list + question editor
+const cn = (await client('/api/progress-tree')).subjects.find((s) => s.name === 'Computer Network');
+const quizChapter = cn.chapters[0];
+const mcqTopic = quizChapter.topics[0];
+const quiz = await client('/api/quizzes', 'POST', { chapterId: quizChapter.id, title: 'QA smoke quiz' });
+await client(`/api/quizzes/${quiz.id}/questions`, 'POST', {
+  type: 'mcq',
+  topicId: mcqTopic.id,
+  question: 'smoke MCQ প্রশ্ন?',
+  options: ['ঠিক উত্তর', 'ভুল উত্তর'],
+  correctAnswer: 'ঠিক উত্তর',
+});
+await client(`/api/quizzes/${quiz.id}/questions`, 'POST', {
+  type: 'viva',
+  topicId: mcqTopic.id,
+  question: 'smoke viva প্রশ্ন?',
+  correctAnswer: 'মডেল উত্তর',
+});
+
+await root.unmount();
+root = await renderAt(`/quiz/${quiz.id}`, 1800);
+page = text();
+check(
+  'quiz opens with its questions and both grading hints',
+  page.includes('smoke MCQ প্রশ্ন?') && page.includes('auto-graded') && page.includes('নিজে মার্ক করবে'),
+  page.slice(0, 500)
+);
+
+await click(byText('Quiz দাও'), 1500);
+check('quiz can be taken: questions shown without answers', text().includes('উত্তর দিয়েছ 0 টা') && !text().includes('ঠিক উত্তরঃ'));
+
+// answer the MCQ wrongly and the viva with text, through the UI radios/textarea
+const radio = [...document.querySelectorAll('input[type=radio]')].find((el) => el.parentElement.textContent.includes('ভুল উত্তর'));
+if (radio) {
+  await act(async () => {
+    radio.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    radio.checked = true;
+    radio.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+    await wait(200);
+  });
+}
+const vivaBox = [...document.querySelectorAll('textarea')].pop();
+if (vivaBox) await type(vivaBox, 'আমার নিজের লেখা উত্তর');
+await click(byText('জমা দাও ও স্কোর দেখো'), 2000);
+page = text();
+check('auto-grading marks the wrong MCQ and flags the unmarked written answer', page.includes('নিজে মার্ক বাকি') && page.includes('০ ধরা হয়েছে'));
+check('the review reveals the correct answer', page.includes('সঠিক উত্তর'));
+check('the topic lands in the measured weak list', page.includes('দুর্বল topic (মাপা, অনুমান নয়)'));
+
+await click(byText('সঠিক'), 1800);
+page = text();
+check(
+  'marking the written answer yourself raises the accuracy',
+  page.includes('1/2') && page.includes('50%'),
+  page.slice(0, 400)
+);
+
+// weak topic -> revision button must really reach the revision queue
+const weakTopic = (await client('/api/quiz-results/weak-topics')).weakTopics[0];
+if (weakTopic) {
+  await click(byText('revision দরকার'), 1500);
+  const queue = await client('/api/statuses/revision-queue');
+  check('weak topic can be sent to the revision queue from the review', queue.some((item) => item.topicId === weakTopic.topicId));
+} else {
+  check('weak topic can be sent to the revision queue from the review', false, 'no weak topic was recorded');
+}
+
+await root.unmount();
+root = await renderAt('/quiz', 1800);
+check(
+  'quiz list shows the created quiz with its score badge',
+  text().includes('QA smoke quiz') && text().includes('1/2'),
+  text().slice(0, 300)
+);
+
+await client(`/api/quizzes/${quiz.id}`, 'DELETE');
+await client(`/api/topics/${mcqTopic.id}/status`, 'PATCH', { status: 'not_started' });
 
 await root.unmount();
 root = await renderAt('/notes', 1400);

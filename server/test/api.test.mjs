@@ -553,3 +553,249 @@ test('analytics summarises the week, the average sitting and most/least studied'
   assert.equal(body.last7Days.slice(0, 6).every((d) => d.minutes === 0), true, 'earlier days are honest zeros');
   assert.match(today.label, /^(রবি|সোম|মঙ্গল|বুধ|বৃহঃ|শুক্র|শনি)$/);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 3 — Quiz system
+// ---------------------------------------------------------------------------
+
+/** Creates a quiz on the first chapter of a subject with one question of each type. */
+async function makeQuizFixture(subjectName, topicNames) {
+  const subject = await findSubject(subjectName);
+  const chapter = subject.chapters[0];
+  const quiz = await post('/api/quizzes', { chapterId: chapter.id, title: `${subjectName} — quiz` });
+  assert.equal(quiz.status, 201);
+
+  const [topicA, topicB] = topicNames.map((name) => chapter.topics.find((t) => t.name === name));
+
+  const questions = [];
+  questions.push(
+    await post(`/api/quizzes/${quiz.body.id}/questions`, {
+      type: 'mcq',
+      topicId: topicA.id,
+      question: 'নিচের কোনটা সঠিক?',
+      options: ['option A', 'option B', 'option C'],
+      correctAnswer: 'option B',
+      explanation: 'কারণ option B-ই ঠিক',
+    })
+  );
+  questions.push(
+    await post(`/api/quizzes/${quiz.body.id}/questions`, {
+      type: 'true_false',
+      topicId: topicA.id,
+      question: 'এই কথাটা সত্য?',
+      correctAnswer: 'মিথ্যা',
+    })
+  );
+  questions.push(
+    await post(`/api/quizzes/${quiz.body.id}/questions`, {
+      type: 'short',
+      topicId: topicB.id,
+      question: 'সংক্ষেপে লিখো',
+      correctAnswer: 'মডেল উত্তর',
+    })
+  );
+  return { subject, chapter, quiz: quiz.body, questions: questions.map((q) => q.body) };
+}
+
+test('a quiz can be created with questions of all four types, but answers stay hidden', async () => {
+  const { quiz, questions, chapter } = await makeQuizFixture('Computer Network', [
+    'Network definition',
+    'Basic concepts',
+  ]);
+
+  assert.equal(questions.length, 3);
+  assert.equal(questions[0].options.length, 3);
+  assert.equal(questions[0].correctAnswer, 'option B');
+  assert.equal(questions[1].options.join('/'), 'সত্য/মিথ্যা', 'true/false options are added automatically');
+
+  const viva = await post(`/api/quizzes/${quiz.id}/questions`, {
+    type: 'viva',
+    topicId: chapter.topics[0].id,
+    question: 'MQTT কী?',
+    correctAnswer: 'হালকা messaging protocol',
+  });
+  assert.equal(viva.status, 201);
+  assert.equal(viva.body.type, 'viva');
+
+  // what the UI gets for taking the quiz must not leak the answers
+  const taken = await get(`/api/quizzes/${quiz.id}`);
+  assert.equal(taken.body.questions.length, 4);
+  for (const question of taken.body.questions) {
+    assert.equal(question.correctAnswer, undefined, 'correct answers are never sent before submitting');
+    assert.equal(question.explanation, undefined);
+    assert.equal(typeof question.hasAnswer, 'boolean');
+  }
+
+  // the editor asks for the answers explicitly
+  const editor = await get(`/api/quizzes/${quiz.id}?answers=1`);
+  assert.equal(editor.body.questions[0].correctAnswer, 'option B', 'the editor can see answers');
+  assert.equal(editor.body.questions[1].correctAnswer, 'মিথ্যা');
+
+  const list = await get('/api/quizzes');
+  assert.equal(list.body.quizzes.length, 1);
+  assert.equal(list.body.quizzes[0].questionCount, 4);
+  assert.equal(list.body.quizzes[0].chapterId, chapter.id);
+  assert.equal(list.body.quizzes[0].subjectName, 'Computer Network');
+});
+
+test('question validation refuses answers that do not match the options', async () => {
+  const list = await get('/api/quizzes');
+  const quizId = list.body.quizzes[0].id;
+
+  const badType = await post(`/api/quizzes/${quizId}/questions`, { type: 'essay', question: 'x' });
+  assert.equal(badType.status, 400);
+
+  const oneOption = await post(`/api/quizzes/${quizId}/questions`, {
+    type: 'mcq',
+    question: 'x',
+    options: ['only one'],
+    correctAnswer: 'only one',
+  });
+  assert.equal(oneOption.status, 400, 'an MCQ needs at least two options');
+
+  const wrongAnswer = await post(`/api/quizzes/${quizId}/questions`, {
+    type: 'mcq',
+    question: 'x',
+    options: ['a', 'b'],
+    correctAnswer: 'c',
+  });
+  assert.equal(wrongAnswer.status, 400, 'the correct answer must be one of the options');
+
+  const badTf = await post(`/api/quizzes/${quizId}/questions`, {
+    type: 'true_false',
+    question: 'x',
+    correctAnswer: 'maybe',
+  });
+  assert.equal(badTf.status, 400);
+
+  // a question may not point at a topic from another chapter
+  const other = await findSubject('DBMS');
+  const foreignTopic = await post(`/api/quizzes/${quizId}/questions`, {
+    type: 'short',
+    question: 'x',
+    topicId: other.chapters[0].topics[0].id,
+  });
+  assert.equal(foreignTopic.status, 400, 'weak-topic reporting only works inside the quiz chapter');
+
+  assert.equal((await post('/api/quizzes', { chapterId: 999999, title: 'x' })).status, 404);
+  assert.equal((await post('/api/quizzes', { chapterId: 1 })).status, 400, 'a title is required');
+});
+
+test('MCQ and True/False are graded by the app, written answers wait for the student', async () => {
+  const list = await get('/api/quizzes');
+  const quiz = list.body.quizzes[0];
+  const questions = (await get(`/api/quizzes/${quiz.id}`)).body.questions;
+  const mcq = questions.find((q) => q.type === 'mcq');
+  const tf = questions.find((q) => q.type === 'true_false');
+  const written = questions.filter((q) => q.type === 'short' || q.type === 'viva');
+
+  const attempt = await post(`/api/quizzes/${quiz.id}/attempt`, {
+    answers: [
+      { questionId: mcq.id, answer: '  OPTION b ' }, // spelling of whitespace/case must not matter
+      { questionId: tf.id, answer: 'সত্য' }, // deliberately wrong
+      { questionId: written[0].id, answer: 'আমার লেখা উত্তর' },
+    ],
+  });
+
+  assert.equal(attempt.status, 201);
+  const { result, review, unmarkedQuestionIds } = attempt.body;
+  assert.equal(result.total, 4, 'every question is worth one point');
+  assert.equal(result.score, 1, 'only the correct MCQ scores — written answers are not guessed');
+  assert.equal(result.accuracy, 25);
+
+  const mcqReview = review.find((r) => r.questionId === mcq.id);
+  assert.equal(mcqReview.isCorrect, true);
+  assert.equal(mcqReview.correctAnswer, 'option B', 'the correct answer is revealed after submitting');
+
+  const writtenReview = review.find((r) => r.questionId === written[0].id);
+  assert.equal(writtenReview.selfGraded, false);
+  assert.equal(writtenReview.awarded, 0);
+  assert.equal(unmarkedQuestionIds.length, 2, 'both written questions are waiting to be marked');
+
+  // the topic with the wrong + unmarked answers must now show up as weak...
+  const weak = await get('/api/quiz-results/weak-topics');
+  assert.equal(weak.body.weakTopics.length, 2, 'only topics that were really asked can be weak');
+  assert.ok(weak.body.weakTopics.every((t) => t.accuracy < 60));
+  assert.ok(weak.body.weakTopics.every((t) => t.suggestRevision === true));
+
+  // ...and the summary must describe the attempt honestly
+  const summary = await get('/api/quiz-results');
+  assert.equal(summary.body.summary.attempts, 1);
+  assert.equal(summary.body.summary.averageAccuracy, 25);
+  assert.equal(summary.body.results.length, 1);
+});
+
+test('marking a written answer yourself updates the score and the weak list', async () => {
+  const results = await get('/api/quiz-results');
+  const resultId = results.body.results[0].id;
+  const detail = await get(`/api/quiz-results/${resultId}`);
+  const written = detail.body.review.filter((r) => !r.autoGraded);
+
+  const badMark = await patch(`/api/quiz-results/${resultId}/self-mark`, {
+    marks: [{ questionId: written[0].questionId, selfScore: 0.75 }],
+  });
+  assert.equal(badMark.status, 400, 'only 1 / 0.5 / 0 are allowed');
+
+  const mcqMark = await patch(`/api/quiz-results/${resultId}/self-mark`, {
+    marks: [{ questionId: detail.body.review.find((r) => r.autoGraded).questionId, selfScore: 1 }],
+  });
+  assert.equal(mcqMark.status, 400, 'auto-graded questions cannot be marked by hand');
+
+  const marked = await patch(`/api/quiz-results/${resultId}/self-mark`, {
+    marks: [
+      { questionId: written[0].questionId, selfScore: 1 },
+      { questionId: written[1].questionId, selfScore: 0.5 },
+    ],
+  });
+  assert.equal(marked.status, 200);
+  assert.equal(marked.body.result.score, 2.5, '1 (mcq) + 1 (full) + 0.5 (partial)');
+  assert.equal(marked.body.result.accuracy, 63, '2.5 of 4 is 63%');
+  assert.equal(marked.body.unmarkedQuestionIds.length, 0, 'nothing is waiting to be marked any more');
+  assert.equal(marked.body.review.filter((r) => r.selfGraded).length, 2);
+  assert.equal(marked.body.result.weakTopics.length, 1, 'the still-wrong topic stays weak');
+
+  const afterMarking = await get('/api/quiz-results/weak-topics');
+  assert.equal(afterMarking.body.summary.averageAccuracy, 63, 'the summary follows the corrected attempt');
+
+  const unknown = await patch(`/api/quiz-results/${resultId}/self-mark`, {
+    marks: [{ questionId: 999999, selfScore: 1 }],
+  });
+  assert.equal(unknown.status, 404);
+});
+
+test('quiz attempts are reviewed, listed and deletable with the quiz', async () => {
+  const results = await get('/api/quiz-results');
+  const resultId = results.body.results[0].id;
+  const detail = await get(`/api/quiz-results/${resultId}`);
+
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.quizTitle.includes('Computer Network'), true);
+  assert.ok(detail.body.review.every((r) => r.question && r.typeLabel), 'each row has the question + type label');
+  assert.ok(detail.body.weakTopics.length >= 1);
+
+  const list = await get('/api/quizzes');
+  const quizId = list.body.quizzes[0].id;
+  const renamed = await patch(`/api/quizzes/${quizId}`, { title: 'Computer Network — অধ্যায় ১ quiz' });
+  assert.equal(renamed.body.title, 'Computer Network — অধ্যায় ১ quiz');
+
+  const edited = await patch(`/api/quizzes/${quizId}/questions/${detail.body.review[0].questionId}`, {
+    explanation: 'আগের explanation বদলানো',
+  });
+  assert.equal(edited.body.explanation, 'আগের explanation বদলানো');
+  assert.equal(edited.body.question, detail.body.review[0].question, 'the rest of the question stays');
+
+  assert.equal((await get('/api/quizzes/999999')).status, 404);
+  assert.equal((await post('/api/quizzes/999999/attempt', { answers: [] })).status, 404);
+  assert.equal((await get('/api/quiz-results/999999')).status, 404);
+
+  const removed = await del(`/api/quizzes/${quizId}`);
+  assert.equal(removed.status, 204);
+  assert.equal((await get('/api/quizzes')).body.quizzes.length, 0, 'the quiz is gone');
+  assert.equal(
+    (await get('/api/quiz-results')).body.results.length,
+    0,
+    'its attempts go with it — no orphan results, and no fake accuracy left behind'
+  );
+  assert.equal((await get('/api/quiz-results/weak-topics')).body.weakTopics.length, 0);
+  assert.equal((await get('/api/quizzes')).body.summary.averageAccuracy, 0, 'accuracy is 0 again, not a stale number');
+});

@@ -15,6 +15,9 @@ import SettingsPage from './pages/SettingsPage.jsx';
 import MorePage from './pages/MorePage.jsx';
 import ComingSoonPage from './pages/ComingSoonPage.jsx';
 import StudyPage from './pages/StudyPage.jsx';
+import QuizPage from './pages/QuizPage.jsx';
+import QuizDetailPage from './pages/QuizDetailPage.jsx';
+import QuizResultPage from './pages/QuizResultPage.jsx';
 import { EmptyState } from './components/ui/index.jsx';
 import { PHASE_INFO } from './components/layout/navItems.js';
 
@@ -40,17 +43,9 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/more" element={<MorePage />} />
             <Route path="/study" element={<StudyPage />} />
-            <Route
-              path="/quiz"
-              element={
-                <ComingSoonPage
-                  phase={3}
-                  title="Quiz System"
-                  description="Chapter-wise MCQ, True/False, Short ও Viva প্রশ্ন"
-                  points={PHASE_INFO[3].points}
-                />
-              }
-            />
+            <Route path="/quiz" element={<QuizPage />} />
+            <Route path="/quiz/results/:resultId" element={<QuizResultPage />} />
+            <Route path="/quiz/:quizId" element={<QuizDetailPage />} />
             <Route
               path="/ai"
               element={

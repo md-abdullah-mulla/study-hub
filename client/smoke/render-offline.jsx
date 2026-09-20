@@ -207,7 +207,63 @@ check(
     afterReload.summary.todayMinutes === 30
 );
 
-// ---- 10. later-phase screens stay honest --------------------------------
+// ---- 10. Quiz system with no server at all -------------------------------
+await root.unmount();
+root = await renderAt('/quiz', 1800);
+check('offline quiz screen is honest when empty', text().includes('এখনো কোনো quiz নেই') && text().includes('Average Accuracy'));
+
+const offlineTree = await api('/progress-tree');
+const offlineChapter = offlineTree.subjects[0].chapters[0];
+const offlineTopic = offlineChapter.topics[0];
+const offlineQuiz = await api('/quizzes', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ chapterId: offlineChapter.id, title: 'Offline quiz' }),
+});
+await api(`/quizzes/${offlineQuiz.id}/questions`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    type: 'mcq',
+    topicId: offlineTopic.id,
+    question: 'offline MCQ?',
+    options: ['ঠিক', 'ভুল'],
+    correctAnswer: 'ঠিক',
+  }),
+});
+
+await root.unmount();
+root = await renderAt(`/quiz/${offlineQuiz.id}`, 1800);
+check('offline quiz editor shows the question and its grading mode', text().includes('offline MCQ?') && text().includes('auto-graded'));
+
+await click(byText('Quiz দাও'), 1500);
+const correctRadio = [...document.querySelectorAll('input[type=radio]')].find((el) => el.parentElement.textContent.includes('ঠিক'));
+if (correctRadio) {
+  await act(async () => {
+    correctRadio.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    correctRadio.checked = true;
+    correctRadio.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+    await wait(200);
+  });
+}
+await click(byText('জমা দাও ও স্কোর দেখো'), 2000);
+check('offline attempt is graded instantly (1/1, 100%)', text().includes('100%') && text().includes('1/1'), text().slice(0, 300));
+
+const offlineQuizSummary = await api('/quiz-results');
+check(
+  'offline quiz summary counts the attempt',
+  offlineQuizSummary.summary.attempts === 1 && offlineQuizSummary.summary.averageAccuracy === 100
+);
+
+await globalThis.__OFFLINE_BACKEND__.flush();
+await globalThis.__OFFLINE_RELOAD__();
+const afterReloadQuiz = await api('/quiz-results');
+check(
+  'quiz results survive a reload of the in-page database',
+  afterReloadQuiz.summary.attempts === 1 && afterReloadQuiz.results[0].accuracy === 100
+);
+
+// ---- 11. later-phase screens stay honest --------------------------------
 await root.unmount();
 root = await renderAt('/ai');
 check('AI screen still says it is a later phase', text().includes('Phase 4') && text().includes('এখনো তৈরি হয়নি'));

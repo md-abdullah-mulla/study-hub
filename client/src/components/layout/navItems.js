@@ -23,7 +23,7 @@ export const NAV_ITEMS = [
   { to: '/chapters', label: 'Chapter & Topic', en: 'Chapters', icon: ListTree, phase: 1, mobile: true },
   { to: '/study', label: 'Study Session', en: 'Study', icon: BookOpenCheck, phase: 1, mobile: true },
   { to: '/revision', label: 'Revision', en: 'Revision', icon: RefreshCw, phase: 2, mobile: false },
-  { to: '/quiz', label: 'Quiz', en: 'Quiz', icon: ListChecks, phase: 3, mobile: false },
+  { to: '/quiz', label: 'Quiz', en: 'Quiz', icon: ListChecks, phase: 1, mobile: true },
   { to: '/ai', label: 'AI Assistant', en: 'AI', icon: Sparkles, phase: 4, mobile: false },
   { to: '/analytics', label: 'Analytics', en: 'Analytics', icon: BarChart3, phase: 1, mobile: true },
   { to: '/notes', label: 'Notes', en: 'Notes', icon: NotebookPen, phase: 1, mobile: true },

@@ -91,6 +91,26 @@ export const api = {
 
   analytics: () => request('/analytics'),
 
+  quizzes: {
+    list: () => request('/quizzes'),
+    get: (id, { withAnswers = false } = {}) => request(`/quizzes/${id}${withAnswers ? '?answers=1' : ''}`),
+    create: (data) => request('/quizzes', { method: 'POST', body: data }),
+    update: (id, data) => request(`/quizzes/${id}`, { method: 'PATCH', body: data }),
+    remove: (id) => request(`/quizzes/${id}`, { method: 'DELETE' }),
+    addQuestion: (id, data) => request(`/quizzes/${id}/questions`, { method: 'POST', body: data }),
+    updateQuestion: (id, questionId, data) =>
+      request(`/quizzes/${id}/questions/${questionId}`, { method: 'PATCH', body: data }),
+    removeQuestion: (id, questionId) => request(`/quizzes/${id}/questions/${questionId}`, { method: 'DELETE' }),
+    attempt: (id, answers) => request(`/quizzes/${id}/attempt`, { method: 'POST', body: { answers } }),
+  },
+
+  quizResults: {
+    list: (limit) => request(`/quiz-results${qs({ limit })}`),
+    get: (id) => request(`/quiz-results/${id}`),
+    weakTopics: () => request('/quiz-results/weak-topics'),
+    selfMark: (id, marks) => request(`/quiz-results/${id}/self-mark`, { method: 'PATCH', body: { marks } }),
+  },
+
   sessions: {
     list: (params) => request(`/sessions${qs(params)}`),
     active: () => request('/sessions/active'),
