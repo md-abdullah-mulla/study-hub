@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#2554e0" />
+    <meta
+      name="description"
+      content="Smart Semester Study Management System — Diploma in CST Semester 6 এর পড়াশোনা track, analyse ও revise করার personal app"
+    />
+    <title>Study Hub — Semester 6</title>
+
+    <!-- ============ App metadata (PWA): install করে হোম স্ক্রিন / Start menu-তে ============ -->
+    <!-- relative paths keep the same file working at "/" (Vercel) and "/study-hub/" (Pages) -->
+    <link rel="manifest" href="/study-hub/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/study-hub/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/study-hub/icons/favicon-16.png" />
+    <link rel="icon" href="/study-hub/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/study-hub/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Study Hub" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="application-name" content="Study Hub" />
+    <meta name="format-detection" content="telephone=no" />
+    <!-- Fonts ship WITH the app (scripts/fetch-fonts.mjs) — no third-party request,
+         so the installed app and the desktop app work fully offline. -->
+    <link rel="stylesheet" href="/study-hub/fonts/fonts.css" />
+    <script type="module" crossorigin src="/study-hub/assets/index-Dih-VwRp.js"></script>
+    <link rel="stylesheet" crossorigin href="/study-hub/assets/index-DzENhMIJ.css">
+  </head>
+  <body>
+    <!-- replaced by React as soon as the app starts; visible while the local
+         database (sql.js) is loading in the GitHub Pages build -->
+    <div id="root">
+      <div
+        style="
+          font-family: system-ui, -apple-system, 'Noto Sans Bengali', sans-serif;
+          display: flex;
+          min-height: 60vh;
+          align-items: center;
+          justify-content: center;
+          color: #64748b;
+          font-size: 0.9rem;
+        "
+      >
+        Study Hub লোড হচ্ছে…
+      </div>
+    </div>
+  </body>
+</html>
