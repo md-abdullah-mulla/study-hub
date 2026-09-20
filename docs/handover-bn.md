@@ -9,6 +9,15 @@
 
 ---
 
+## Quiz কীভাবে ন্যায্য থাকে (Phase 3)
+
+- **MCQ আর সত্য/মিথ্যা** কম্পিউটার নিজে যাচাই করে — উত্তর মিলিয়ে দেয় (স্পেস/বড়-ছোট হাতের অক্ষর ধরেও নেয়)।
+- **সংক্ষিপ্ত আর Viva** লেখা উত্তর — কম্পিউটার এসবের নম্বর দিতে পারে না। তাই ওগুলো প্রথমে "মার্ক দাওনি (০)" থাকে,
+  আর তুমি নিজে **সঠিক / আংশিক / ভুল** বেছে দিলে স্কোর আবার হিসাব হয়। বানানো নম্বর কখনো দেখায় না।
+- **দুর্বল topic** তখনই বলা হয়, যখন সত্যি সত্যি প্রশ্নের উত্তর দিয়ে accuracy ৬০% এর নিচে নামে। যে topic নিয়ে
+  প্রশ্নই করোনি, সেটাকে কখনো "দুর্বল" বলা হয় না।
+- Quiz খোলার সময় প্রশ্নের সাথে **উত্তর পাঠানো হয় না** — উত্তর আসে শুধু জমা দেওয়ার পরে, তাই স্কোরের মানে থাকে।
+
 ## এটা কীভাবে কাজ করছে (গুরুত্বপূর্ণ)
 
 এই লিংকে **আলাদা কোনো server নেই** — পুরো app তোমার ব্রাউজারের ভেতরেই চলে:
@@ -43,7 +52,8 @@ service, repository ফাইলগুলোই ব্রাউজারে চ�
 | **Global Search** (`Ctrl/Cmd + K`) — subject, chapter, topic, note, question | ✅ সম্পূর্ণ |
 | **Settings / Backup** — JSON backup + snapshot, CSV export, data reset | ✅ সম্পূর্ণ (server ছাড়াও) |
 | **Study Session (timer)** — শুরু → টাইমার → শেষে আসল সময় + confidence + নোট + "revision দরকার" ফ্ল্যাগ, আজ/মোট/streak, সেশনের ইতিহাস | ✅ **সম্পূর্ণ (Phase 2)** |
-| **Quiz**, **AI Assistant** | ⏳ Phase 3/4 — "Coming soon" পেজে কী আসবে লেখা আছে |
+| **Quiz** — chapter-wise MCQ / সত্য-মিথ্যা / সংক্ষিপ্ত / Viva, স্কোর + accuracy, **দুর্বল topic**, revision suggestion | ✅ **নতুন (Phase 3)** |
+| **Exam Mode**, **AI Assistant** | ⏳ Phase 3/4 — "Coming soon" পেজে কী আসবে লেখা আছে |
 
 Semester-এর শুরুতে দেওয়া structure-টাই লোড করা আছে: **৫ subject / ১৩ chapter / ৭৭ topic**
 (Computer Network, IoT & IoT Architecture, DBMS, Microcontroller, Security-Based Surveillance System)।
@@ -54,10 +64,10 @@ Semester-এর শুরুতে দেওয়া structure-টাই লো
 
 | Test | ফল |
 |---|---|
-| Server API test (Node-এ) | ✅ 26/26 |
-| Browser-mode backend test (sql.js) | ✅ 6/6 |
-| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 30/30 |
-| Server-mode full UI smoke (timer + analytics সহ) | ✅ 47/47 |
+| Server API test (Node-এ) | ✅ 31/31 |
+| Browser-mode backend test (sql.js) | ✅ 7/7 |
+| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 35/35 |
+| Server-mode full UI smoke (timer + analytics + quiz সহ) | ✅ 56/56 |
 | oxlint | ✅ 0 warning, 0 error |
 | Production + Pages build | ✅ ঠিকঠাক |
 
