@@ -9,6 +9,22 @@
 
 ---
 
+## 🖼️ Illustration prompt কীভাবে কাজ করে (Phase 4, API ছাড়া)
+
+প্রতিটি topic-এর পাশে **🖼️ Create Illustration** চাপলে একটা modal খুলবে — Subject, Chapter, Topic নিজে থেকেই বসে
+থাকবে (আবার লিখতে হবে না)। type বেছে **Generate Prompt** চাপলেই পূর্ণ English prompt তৈরি হয়।
+
+- **কোনো AI API নেই, কোনো API key নেই** — prompt পুরোটাই তোমার নিজের topic data থেকে অ্যাপ নিজেই বানায়।
+- prompt-এ থাকে: concept, অংশগুলো (label সহ), ধাপ, অংশগুলোর সম্পর্ক, layout, design rules, avoid list,
+  audience (Bangladeshi Diploma CST student) আর final check। ছবির ভেতরের label ছোট ইংরেজিতে, ব্যাখ্যা তোমার জন্য।
+- **topic অনুযায়ী আলাদা**: MQTT → Publisher / Broker / Subscriber / Topic; Computer Network → client, switch,
+  router, packet; Microcontroller → CPU, ROM/RAM, I/O, timer/interrupt।
+- **নতুন topic হলেও কাজ করে**: যে topic খুঁজে না পাওয়া যায়, তার নাম + description + chapter + subject থেকে
+  নিজেই অংশগুলো বের করে (যেমন "Ohms Law" + description "Voltage, current, resistance")।
+- **🔄 Regenerate** — একই topic-এর জন্য প্রথমে অন্য variant (৩টা), তারপর পরের illustration type।
+- **✏️ Edit Prompt** → textarea-তে নিজে বদলাও, **📋 Copy Prompt** → clipboard-এ copy, "Prompt copied successfully!" দেখাবে।
+- copy করা prompt ChatGPT/Gemini-তে paste করে ছবি বানাও; ছবিটা এখন নিজে save করে রাখো (AI image সংরক্ষণ Phase 5-এ)।
+
 ## Quiz কীভাবে ন্যায্য থাকে (Phase 3)
 
 - **MCQ আর সত্য/মিথ্যা** কম্পিউটার নিজে যাচাই করে — উত্তর মিলিয়ে দেয় (স্পেস/বড়-ছোট হাতের অক্ষর ধরেও নেয়)।
@@ -53,7 +69,8 @@ service, repository ফাইলগুলোই ব্রাউজারে চ�
 | **Settings / Backup** — JSON backup + snapshot, CSV export, data reset | ✅ সম্পূর্ণ (server ছাড়াও) |
 | **Study Session (timer)** — শুরু → টাইমার → শেষে আসল সময় + confidence + নোট + "revision দরকার" ফ্ল্যাগ, আজ/মোট/streak, সেশনের ইতিহাস | ✅ **সম্পূর্ণ (Phase 2)** |
 | **Quiz** — chapter-wise MCQ / সত্য-মিথ্যা / সংক্ষিপ্ত / Viva, স্কোর + accuracy, **দুর্বল topic**, revision suggestion | ✅ **নতুন (Phase 3)** |
-| **Exam Mode**, **AI Assistant** | ⏳ Phase 3/4 — "Coming soon" পেজে কী আসবে লেখা আছে |
+| **🖼️ Create Illustration (AI Image Prompt Generator)** — প্রতি topic-এর পাশে button, ৫ ধরনের illustration, topic-specific English prompt, edit + copy + regenerate; **কোনো AI API বা API key লাগে না** | ✅ **নতুন (Phase 4-এর প্রথম feature)** |
+| **Exam Mode**, বাকি **AI Assistant** (AI দিয়ে লেখা content) | ⏳ Phase 3/4 — "Coming soon" পেজে কী আসবে লেখা আছে |
 
 Semester-এর শুরুতে দেওয়া structure-টাই লোড করা আছে: **৫ subject / ১৩ chapter / ৭৭ topic**
 (Computer Network, IoT & IoT Architecture, DBMS, Microcontroller, Security-Based Surveillance System)।
@@ -64,10 +81,10 @@ Semester-এর শুরুতে দেওয়া structure-টাই লো
 
 | Test | ফল |
 |---|---|
-| Server API test (Node-এ) | ✅ 31/31 |
+| Server API test (Node-এ) | ✅ 37/37 |
 | Browser-mode backend test (sql.js) | ✅ 7/7 |
-| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 35/35 |
-| Server-mode full UI smoke (timer + analytics + quiz সহ) | ✅ 56/56 |
+| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 40/40 |
+| Server-mode full UI smoke (timer + analytics + quiz + illustration সহ) | ✅ 69/69 |
 | oxlint | ✅ 0 warning, 0 error |
 | Production + Pages build | ✅ ঠিকঠাক |
 
@@ -96,5 +113,4 @@ token-এ `workflow` permission নেই; GitHub web-এ ফাইলটা ব
 
 1. **Phase 2 — Study Session Tracker:** timer দিয়ে পড়া track (subject/chapter/topic, সময়, confidence, revision needed) → তার থেকে daily/weekly analytics, streak, longest streak।
 2. **Phase 3 — Quiz System:** MCQ/True-False/Short/Viva, score + accuracy, weak topic বের করা, সেই অনুযায়ী revision suggestion, Exam Mode (বাস্তবসম্মত schedule)।
-3. **Phase 4 — AI Assistant:** topic-wise সহজ সংজ্ঞা, ব্যাখ্যা, গুরুত্বপূর্ণ পয়েন্ট, উদাহরণ, সংক্ষিপ্ত উত্তর, সম্ভাব্য প্রশ্ন, MCQ, Viva, revision summary — save/regenerate/edit/delete, আর AI note আলাদা রাখা।
-4. **Phase 5 — AI Illustration:** concept বোঝার পর শিক্ষামূলক diagram generate → preview → save → download; সাথে advanced analytics + PDF/CSV export।
+4. **Phase 5 — AI Illustration (image generation):** এখন prompt generator হয়েছে; Phase 5-এ ওই prompt সোজা AI image API-তে পাঠিয়ে ছবি generate → preview → save → download হবে। architecture আগেই আলাদা রাখা হয়েছে (`illustrationPromptService.js`-এ শুধু একটা function যোগ করলেই হবে)। সাথে advanced analytics + PDF export।
