@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-ink-50 text-ink-900 antialiased;
+  }
+  /* Bangla text needs a little more line-height to stay readable */
+  p,
+  li,
+  td {
+    @apply leading-relaxed;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-ink-200 bg-white shadow-card;
+  }
+  .card-pad {
+    @apply p-4 sm:p-5;
+  }
+  .section-title {
+    @apply text-sm font-semibold text-ink-900;
+  }
+  .muted {
+    @apply text-xs text-ink-500;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .btn-ghost {
+    @apply btn border border-ink-200 bg-white text-ink-700 hover:bg-ink-50;
+  }
+  .btn-danger {
+    @apply btn border border-red-200 bg-white text-red-600 hover:bg-red-50;
+  }
+  .input {
+    @apply w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-ink-600;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium;
+  }
+  .nav-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-ink-600 transition-colors hover:bg-ink-100 hover:text-ink-900;
+  }
+  .nav-link-active {
+    @apply bg-brand-50 text-brand-700 hover:bg-brand-50;
+  }
+}
