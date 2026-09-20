@@ -71,8 +71,15 @@ export const planRepo = {
     return planRepo.findById(info.lastInsertRowid);
   },
 
-  setDone(id, isDone) {
-    db.prepare('UPDATE study_plan_items SET is_done = ? WHERE id = ?').run(isDone ? 1 : 0, id);
+  /** Update the tick and/or the title of one plan item (both optional). */
+  update(id, { isDone, title } = {}) {
+    const current = planRepo.findById(id);
+    if (!current) return null;
+    db.prepare('UPDATE study_plan_items SET is_done = ?, title = ? WHERE id = ?').run(
+      (isDone ?? current.isDone) ? 1 : 0,
+      title ?? current.title,
+      id
+    );
     return planRepo.findById(id);
   },
 

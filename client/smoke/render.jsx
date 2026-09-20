@@ -127,7 +127,10 @@ check('dashboard shows revision + activity sections', page.includes('Revision Du
 const firstPlanCheckbox = document.querySelector('button[aria-label="Done"]');
 check('today plan has a tickable item', Boolean(firstPlanCheckbox));
 if (firstPlanCheckbox) {
-  await click(firstPlanCheckbox, 900);
+  await click(firstPlanCheckbox, 1200);
+  // the tick must reach the database and survive a dashboard reload
+  const planNow = await client('/api/plan');
+  check('ticking a plan item is saved to the database', planNow.some((item) => item.isDone === true));
   const pageAfter = text();
   check('ticking a plan item keeps the plan stable', pageAfter.includes("Today's Target"));
 }

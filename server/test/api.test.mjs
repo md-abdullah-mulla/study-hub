@@ -174,6 +174,14 @@ test('validation and 404 handling', async () => {
   const missing = await get('/api/topics/999999');
   assert.equal(missing.status, 404);
 
+  // unknown ids must answer 404 on every PATCH route (they returned 500 once)
+  assert.equal((await patch('/api/subjects/999999', { name: 'x' })).status, 404);
+  assert.equal((await patch('/api/chapters/999999', { name: 'x' })).status, 404);
+  assert.equal((await patch('/api/topics/999999', { name: 'x' })).status, 404);
+  assert.equal((await patch('/api/notes/999999', { body: 'x' })).status, 404);
+  assert.equal((await patch('/api/plan/999999', { isDone: true })).status, 404);
+  assert.equal((await del('/api/subjects/999999')).status, 404);
+
   const unknownRoute = await get('/api/does-not-exist');
   assert.equal(unknownRoute.status, 404);
 });
@@ -285,6 +293,30 @@ test("today's plan is generated once and stays editable", async () => {
   const regenerated = await post('/api/plan/regenerate', {});
   assert.ok(regenerated.body.length >= 1);
   assert.ok(regenerated.body.length <= 3);
+});
+
+test('plan items can be ticked, renamed and un-ticked', async () => {
+  const plan = await post('/api/plan/regenerate', {});
+  const item = plan.body[0];
+  assert.equal(item.isDone, false);
+
+  // tick it — this used to answer twice (ERR_HTTP_HEADERS_SENT)
+  const ticked = await patch(`/api/plan/${item.id}`, { isDone: true });
+  assert.equal(ticked.status, 200);
+  assert.equal(ticked.body.isDone, true);
+
+  const stored = await get('/api/plan');
+  assert.equal(stored.body.find((p) => p.id === item.id).isDone, true, 'tick must be persisted');
+
+  const renamed = await patch(`/api/plan/${item.id}`, { title: 'আজ MQTT রিভিশন' });
+  assert.equal(renamed.body.title, 'আজ MQTT রিভিশন');
+  assert.equal(renamed.body.isDone, true, 'renaming must not clear the tick');
+
+  const unticked = await patch(`/api/plan/${item.id}`, { isDone: false });
+  assert.equal(unticked.body.isDone, false);
+
+  const missing = await patch('/api/plan/999999', { isDone: true });
+  assert.equal(missing.status, 404);
 });
 
 test('exports work: JSON backup and CSV of all topics', async () => {

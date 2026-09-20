@@ -42,11 +42,13 @@ export function planRouter({ getUserId }) {
       const id = toInt(req.params.id, 'id');
       const item = planRepo.findById(id);
       if (!item) throw notFound('Plan item not found');
-      if (req.body.title !== undefined || req.body.isDone !== undefined) {
-        const updated = planRepo.setDone(id, req.body.isDone ?? item.isDone);
-        res.json({ ...updated, title: req.body.title ?? updated.title });
-      }
-      res.json(item);
+
+      // one response per request: tick and/or rename, then return the stored row
+      const updated = planRepo.update(id, {
+        isDone: req.body.isDone === undefined ? undefined : Boolean(req.body.isDone),
+        title: req.body.title === undefined ? undefined : String(req.body.title).trim(),
+      });
+      res.json(updated);
     })
   );
 
