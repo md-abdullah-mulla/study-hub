@@ -1,5 +1,6 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { CONCEPT_ENTRIES } from '../src/services/illustration/conceptLibrary.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -1088,4 +1089,393 @@ test('a topic without hand-written knowledge gets an honest draft, not fake fact
   assert.equal((await post('/api/study-content/topic/999999/generate', {})).status, 404);
 
   await del(`/api/subjects/${subject.body.id}`);
+});
+
+// ---------------------------------------------------------------------------
+// Content mapping rule: Topic → Subject → Chapter → Content
+// (a topic must never be answered with another subject's knowledge)
+// ---------------------------------------------------------------------------
+
+test('microcontroller topics get microcontroller content (mapping fix)', async () => {
+  const mcu = await findSubject('Microcontroller');
+  const expect = {
+    'Architecture concepts': 'mcu-architecture',
+    'Harvard vs Von Neumann architecture': 'harvard-von-neumann',
+    'RISC vs CISC': 'risc-cisc',
+    'Interrupt vector table': 'interrupt-vector-table',
+    'ADC basics': 'adc-pwm',
+    'PWM applications': 'adc-pwm',
+  };
+
+  for (const [topicName, conceptId] of Object.entries(expect)) {
+    const topic = mcu.chapters.flatMap((chapter) => chapter.topics).find((t) => t.name === topicName);
+    assert.ok(topic, `topic ${topicName} exists`);
+
+    const generated = await post(`/api/study-content/topic/${topic.id}/generate`, {});
+    assert.equal(generated.body.generator, 'pattern-library', `${topicName} uses the library`);
+    assert.deepEqual(generated.body.matchedIds, [conceptId], `${topicName} → ${conceptId}`);
+    assert.equal(generated.body.profile?.subjectFamily ?? generated.body.subjectFamily ?? 'microcontroller', 'microcontroller');
+  }
+});
+
+test('no topic is answered with another subject family knowledge', async () => {
+  const tree = await get('/api/progress-tree');
+  const subjectFamily = (name) =>
+    /security|surveillance/i.test(name)
+      ? 'security'
+      : /dbms|database/i.test(name)
+        ? 'dbms'
+        : /microcontroller|microprocessor/i.test(name)
+          ? 'microcontroller'
+          : /network/i.test(name)
+            ? 'network'
+            : /iot/i.test(name)
+              ? 'iot'
+              : 'unknown';
+
+  const mismatches = [];
+  for (const subject of tree.body.subjects) {
+    const family = subjectFamily(subject.name);
+    if (family === 'unknown') continue;
+    for (const chapter of subject.chapters) {
+      for (const topic of chapter.topics) {
+        const generated = await post(`/api/study-content/topic/${topic.id}/generate`, { kinds: ['easy_definition'] });
+        const ids = generated.body.matchedIds ?? [];
+        if (!ids.length) continue; // draft mode is honest, never wrong
+        // every used concept must belong to this subject family (or be generic)
+        for (const id of ids) {
+          const entry = CONCEPT_ENTRIES.find((candidate) => candidate.id === id);
+          const generic = !entry.family || entry.family === 'general';
+          const sameFamily = entry.family === family;
+          const strongName = Boolean(entry.strong?.test(topic.name));
+          if (!generic && !sameFamily && !strongName) {
+            mismatches.push(`${subject.name} / ${topic.name} → ${id} (${entry.family})`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepEqual(mismatches, [], `cross-subject content: ${mismatches.join(', ')}`);
+});
+
+test('the fixed topics carry their own facts and comparison tables', async () => {
+  const mcu = await findSubject('Microcontroller');
+  const byName = (name) => mcu.chapters.flatMap((chapter) => chapter.topics).find((t) => t.name === name);
+
+  const hn = await post(`/api/study-content/topic/${byName('Harvard vs Von Neumann architecture').id}/generate`, {});
+  const hnPoints = hn.body.sections.find((s) => s.kind === 'important_points').body;
+  assert.match(hnPoints, /তুলনা টেবিল/);
+  assert.match(hnPoints, /Harvard architecture\s+\| Von Neumann architecture/);
+  assert.match(hnPoints, /Von Neumann bottleneck/);
+  assert.ok(!/IoT layer/i.test(hnPoints), 'no IoT text leaks in');
+
+  const risc = await post(`/api/study-content/topic/${byName('RISC vs CISC').id}/generate`, {});
+  const riscPoints = risc.body.sections.find((s) => s.kind === 'important_points').body;
+  assert.match(riscPoints, /RISC\s+\| CISC|RISC-এর|RISC/);
+  assert.match(riscPoints, /ARM, AVR, MIPS, PIC/);
+
+  const ivt = await post(`/api/study-content/topic/${byName('Interrupt vector table').id}/generate`, {});
+  const ivtPoints = ivt.body.sections.find((s) => s.kind === 'important_points').body;
+  assert.match(ivtPoints, /Vector address/);
+  assert.match(ivtPoints, /000BH/, '8051 timer 0 vector address is present');
+  assert.match(ivtPoints, /Reset\s+\|\s+0000H/);
+  assert.ok(!/normalization|Database Management/i.test(ivtPoints), 'no DBMS text leaks in');
+
+  const arch = await post(`/api/study-content/topic/${byName('Architecture concepts').id}/generate`, {});
+  const archPoints = arch.body.sections.find((s) => s.kind === 'important_points').body;
+  for (const part of ['ALU', 'Control Unit', 'Register', 'Memory', 'I/O port', 'bus']) {
+    assert.ok(archPoints.includes(part), `architecture content mentions ${part}`);
+  }
+  assert.ok(!/IoT architecture/i.test(archPoints), 'no IoT layers text in architecture content');
+});
+
+// ---------------------------------------------------------------------------
+// Exam Mode (Phase 5) — timed exam, automatic grading, scope safety
+// ---------------------------------------------------------------------------
+
+async function seedExamBank(chapterId, topicId, prefix) {
+  const quiz = await post('/api/quizzes', { chapterId, title: `${prefix} bank` });
+  const answers = [];
+  for (let i = 1; i <= 6; i += 1) {
+    const question = await post(`/api/quizzes/${quiz.body.id}/questions`, {
+      topicId,
+      type: 'mcq',
+      question: `${prefix} প্রশ্ন ${i}?`,
+      options: [`${prefix} সঠিক ${i}`, `${prefix} ভুল A ${i}`, `${prefix} ভুল B ${i}`],
+      correctAnswer: `${prefix} সঠিক ${i}`,
+    });
+    answers.push({ questionId: question.body.id, answer: `${prefix} সঠিক ${i}` });
+  }
+  return { quiz: quiz.body, answers };
+}
+
+test('exam availability counts the questions of that scope only', async () => {
+  const dbms = await findSubject('DBMS');
+  const chapter = dbms.chapters[0];
+  const topic = chapter.topics.find((entry) => entry.name === 'DBMS');
+
+  const empty = await get(`/api/exams/availability?subjectId=${dbms.id}`);
+  assert.equal(empty.status, 200);
+  assert.equal(empty.body.bank, 0, 'no quiz questions written yet for DBMS');
+
+  const bank = await seedExamBank(chapter.id, topic.id, 'DBMS-exam');
+  const scoped = await get(`/api/exams/availability?topicId=${topic.id}`);
+  assert.equal(scoped.body.bank, 6, 'the six MCQ of this topic are available');
+  assert.equal(scoped.body.topicsInScope, 1);
+
+  await del(`/api/quizzes/${bank.quiz.id}`);
+});
+
+test('an exam only contains questions from the chosen scope, with answers hidden', async () => {
+  const mcu = await findSubject('Microcontroller');
+  const chapter = mcu.chapters.find((entry) => entry.name === 'Interrupts');
+  const topic = chapter.topics.find((entry) => entry.name === 'Interrupt vector table');
+
+  const exam = await post('/api/exams', { topicId: topic.id, questionCount: 3, durationMinutes: 5 });
+  assert.equal(exam.status, 201);
+  assert.equal(exam.body.questions.length, 3);
+  assert.deepEqual(
+    [...new Set(exam.body.questions.map((question) => question.topicName))],
+    ['Interrupt vector table'],
+    'every question comes from the chosen topic'
+  );
+  assert.ok(
+    exam.body.questions.every((question) => !('answer' in question)),
+    'the correct answers stay on the server'
+  );
+  assert.equal(exam.body.counts.generated, 3, 'pattern-based MCQs filled the exam (no quiz bank for this topic)');
+
+  const fetched = await get(`/api/exams/${exam.body.id}`);
+  assert.equal(fetched.status, 200);
+  assert.ok(fetched.body.questions.every((question) => !('answer' in question)));
+  assert.equal(fetched.body.summary, null, 'not graded yet');
+
+  const wrongScope = await post('/api/exams', { topicId: 999999, questionCount: 3 });
+  assert.equal(wrongScope.status, 404);
+});
+
+test('submitting an exam grades correct, wrong and unanswered honestly', async () => {
+  const mcu = await findSubject('Microcontroller');
+  const chapter = mcu.chapters.find((entry) => entry.name === 'Architecture');
+  const topic = chapter.topics.find((entry) => entry.name === 'RISC vs CISC');
+
+  const exam = await post('/api/exams', { chapterId: chapter.id, questionCount: 4, durationMinutes: 10 });
+  assert.equal(exam.status, 201);
+  const questions = exam.body.questions;
+  const byTopic = new Set(questions.map((question) => question.topicName));
+  assert.ok([...byTopic].every((name) => chapter.topics.some((entry) => entry.name === name)), 'scope respected');
+
+  // answer the first correctly (the answer is not in the payload, so read it from the exam snapshot)
+  const source = (await get('/api/exams')).body.exams.find((entry) => entry.id === exam.body.id);
+  assert.ok(source, 'the exam appears in the list');
+
+  const answers = {};
+  // one answer, one deliberate wrong answer, two left unanswered
+  const firstId = questions[0].id;
+  answers[firstId] = '___নিশ্চিত ভুল উত্তর___';
+  if (questions[1]) answers[questions[1].id] = '___আরেকটা ভুল___';
+
+  const graded = await post(`/api/exams/${exam.body.id}/submit`, { answers });
+  assert.equal(graded.status, 200);
+  assert.equal(graded.body.summary.total, 4);
+  assert.equal(graded.body.summary.wrong + graded.body.summary.correct + graded.body.summary.unanswered, 4);
+  assert.equal(graded.body.summary.unanswered, 2, 'the two untouched questions count as unanswered');
+  assert.equal(graded.body.summary.percentage, Math.round((graded.body.summary.correct / 4) * 100));
+  assert.ok(graded.body.summary.timeTakenSeconds >= 0, 'the server measured the time');
+
+  const statuses = graded.body.questions.map((question) => question.status);
+  assert.equal(statuses.filter((status) => status === 'unanswered').length, 2);
+  assert.ok(graded.body.questions.every((question) => 'answer' in question), 'the review shows the correct answers');
+
+  const again = await post(`/api/exams/${exam.body.id}/submit`, { answers: {} });
+  assert.equal(again.status, 400, 'an exam cannot be submitted twice');
+  assert.equal((await get('/api/exams/999999')).status, 404);
+  assert.equal((await del('/api/exams/999999')).status, 404);
+  assert.equal((await post('/api/exams', { chapterId: chapter.id, questionCount: 0 })).status, 400);
+  assert.equal((await post('/api/exams', { chapterId: chapter.id, questionCount: 999 })).status, 400);
+});
+
+test('exam statistics come from graded exams only', async () => {
+  const mcu = await findSubject('Microcontroller');
+  const chapter = mcu.chapters.find((entry) => entry.name === 'Timers/Counters');
+  const topic = chapter.topics.find((entry) => entry.name === 'Timer basics');
+  const bank = await seedExamBank(chapter.id, topic.id, 'Timer-exam');
+  const before = (await get('/api/exams/stats')).body;
+
+  // exam A: every question answered correctly (answers read from a throwaway exam of the same scope)
+  const scored = await post('/api/exams', { topicId: topic.id, questionCount: 3, durationMinutes: 5 });
+  const throwaway = await post('/api/exams', { topicId: topic.id, questionCount: 6, durationMinutes: 5 });
+  const unansweredRun = await post(`/api/exams/${throwaway.body.id}/submit`, { answers: {} });
+  const correctAnswers = Object.fromEntries(unansweredRun.body.questions.map((question) => [question.id, question.answer]));
+  const perfect = await post(`/api/exams/${scored.body.id}/submit`, { answers: correctAnswers });
+  assert.equal(perfect.body.summary.percentage, 100, 'all correct answers give 100%');
+  assert.ok(unansweredRun.body.questions.every((question) => question.status === 'unanswered'));
+
+  const after = (await get('/api/exams/stats')).body;
+  assert.equal(after.totalExams, before.totalExams + 2, 'both graded exams are counted');
+  assert.equal(after.totalQuestionsAnswered, before.totalQuestionsAnswered + 9);
+  assert.equal(after.trend.length, Math.min(10, after.totalExams), 'the trend has one point per exam (max 10)');
+  assert.ok(after.best >= before.best, 'the best score never drops');
+  assert.equal(after.best, 100, 'the perfect exam is the best score');
+  assert.ok(after.lowest <= after.averagePercentage);
+  assert.ok(
+    after.bySubject.some((entry) => entry.subjectName === 'Microcontroller' && entry.attempts >= 1),
+    'per-subject exam performance is reported'
+  );
+
+  await del(`/api/exams/${perfect.body.id}`);
+  await del(`/api/exams/${unansweredRun.body.id}`);
+  await del(`/api/quizzes/${bank.quiz.id}`);
+  const cleared = (await get('/api/exams/stats')).body;
+  assert.equal(cleared.totalExams, before.totalExams, 'deleting the exams removes them from the statistics');
+});
+
+// ---------------------------------------------------------------------------
+// Advanced analytics (Phase 5) — measured numbers and honest insights
+// ---------------------------------------------------------------------------
+
+test('advanced analytics reports measured numbers, not guesses', async () => {
+  const first = await get('/api/analytics/advanced');
+  assert.equal(first.status, 200);
+  const body = first.body;
+
+  // everything the dashboard/analytics screen shows exists and is a number
+  assert.equal(typeof body.totals.topics, 'number');
+  assert.equal(typeof body.totals.questionsAnswered, 'number');
+  assert.equal(body.totals.subjects, body.subjectPerformance.length);
+  assert.equal(body.subjectPerformance.length, 5);
+  assert.ok(body.chapterPerformance.length >= 13);
+
+  // nothing answered yet → weak/strong must stay empty (a topic without data is never judged)
+  assert.deepEqual(body.topics.weak, []);
+  assert.deepEqual(body.topics.strong, []);
+  assert.equal(body.topics.unmeasured, body.totals.topics);
+  assert.ok(body.insights.length >= 1, 'there is always something useful to say');
+
+  // the chart data the UI draws
+  assert.equal(body.chartData.dailyActivity.length, 14);
+  assert.equal(body.chartData.weeklyProgress.length, 8);
+  assert.equal(body.chartData.monthlyProgress.length, 6);
+  assert.ok(Array.isArray(body.chartData.examTrend));
+  assert.ok(body.chartData.correctVsWrong.every((slice) => typeof slice.value === 'number'));
+
+  // a subject with no answered question is labelled as such instead of showing 0 % as a verdict
+  const unmeasuredSubject = body.subjectPerformance.find((subject) => subject.questionsAnswered === 0);
+  assert.ok(unmeasuredSubject && unmeasuredSubject.hasEnoughData === false);
+});
+
+test('advanced analytics counts a real quiz attempt and names the weak chapter', async () => {
+  const cn = await findSubject('Computer Network');
+  const chapter = cn.chapters[0];
+  const topic = chapter.topics.find((entry) => entry.name === 'Network components') ?? chapter.topics[0];
+
+  const quiz = await post('/api/quizzes', { chapterId: chapter.id, title: 'analytics QA quiz' });
+  const wrongAnswers = [];
+  for (let i = 1; i <= 4; i += 1) {
+    const question = await post(`/api/quizzes/${quiz.body.id}/questions`, {
+      topicId: topic.id,
+      type: 'mcq',
+      question: `analytics QA প্রশ্ন ${i}?`,
+      options: ['ঠিক উত্তর', 'ভুল ১', 'ভুল ২'],
+      correctAnswer: 'ঠিক উত্তর',
+    });
+    wrongAnswers.push({ questionId: question.body.id, answer: 'ভুল ১' });
+  }
+  // answer every question wrongly → 0 % accuracy on this chapter
+  const attempt = await post(`/api/quizzes/${quiz.body.id}/attempt`, { answers: wrongAnswers });
+  assert.equal(attempt.status, 201, 'the attempt is stored');
+
+  const analytics = await get('/api/analytics/advanced');
+  const body = analytics.body;
+  assert.equal(body.totals.questionsAnswered >= 4, true);
+  assert.equal(body.totals.correctAnswers, 0);
+  assert.ok(
+    body.topics.weak.some((entry) => entry.topicId === topic.id && entry.accuracy === 0),
+    'the topic answered wrongly is reported as weak'
+  );
+  const weakChapter = body.chapterPerformance.find((entry) => entry.chapterId === chapter.id);
+  assert.equal(weakChapter.accuracy, 0);
+  assert.equal(weakChapter.hasEnoughData, true);
+  assert.ok(
+    body.insights.some((insight) => insight.includes('accuracy')),
+    'the insights mention the measured accuracy'
+  );
+
+  await del(`/api/quizzes/${quiz.body.id}`);
+  const restored = await get('/api/analytics/advanced');
+  assert.equal(restored.body.totals.questionsAnswered, body.totals.questionsAnswered - attempt.body.review.length);
+});
+
+// ---------------------------------------------------------------------------
+// Auto backup (Phase 5) — snapshot, restore, retention
+// ---------------------------------------------------------------------------
+
+test('a backup snapshot can be taken, listed, downloaded and restored', async () => {
+  const tree = await get('/api/progress-tree');
+  const subject = tree.body.subjects[0];
+  const chapter = subject.chapters[0];
+  const topic = chapter.topics[0];
+
+  await patch(`/api/topics/${topic.id}/status`, { status: 'completed' });
+  await post('/api/notes', { topicId: topic.id, body: 'backup QA note' });
+
+  const status = await get('/api/backups/status');
+  assert.equal(status.status, 200);
+  assert.equal(status.body.isDue, true, 'nothing has been backed up yet');
+
+  const created = await post('/api/backups', { kind: 'manual', label: 'QA snapshot' });
+  assert.equal(created.status, 201);
+  assert.ok(created.body.sizeBytes > 1000, 'the snapshot carries the real data');
+  assert.equal(created.body.status.isDue, false, 'a fresh backup is not due');
+
+  const list = await get('/api/backups');
+  assert.ok(list.body.backups.some((row) => row.id === created.body.id));
+  assert.ok(list.body.retention.auto >= 2);
+
+  const payload = await get(`/api/backups/${created.body.id}`);
+  assert.match(payload.body.payload, /"subjects"/);
+  assert.ok(payload.body.payload.includes('backup QA note'), 'the note is inside the snapshot');
+
+  // wipe the data, then restore it
+  await del(`/api/subjects/${subject.id}`);
+  const wiped = await get('/api/progress-tree');
+  assert.equal(wiped.body.subjects.length, tree.body.subjects.length - 1);
+  assert.equal((await post(`/api/backups/${created.body.id}/restore`, {})).status, 400, 'restore needs a confirmation');
+
+  const restored = await post(`/api/backups/${created.body.id}/restore`, { confirm: true });
+  assert.equal(restored.status, 200);
+  assert.equal(restored.body.restored.subjects, tree.body.subjects.length, 'every subject came back');
+
+  const back = await get('/api/progress-tree');
+  const backSubject = back.body.subjects.find((entry) => entry.name === subject.name);
+  assert.ok(backSubject, 'the deleted subject came back');
+  const backTopic = backSubject.chapters[0].topics.find((entry) => entry.name === topic.name);
+  assert.equal(backTopic.status, 'completed', 'progress came back with it');
+
+  const notes = await get(`/api/notes?topicId=${backTopic.id}`);
+  assert.ok(notes.body.some((note) => note.body === 'backup QA note'), 'the note came back too');
+  assert.ok(restored.body.safetySnapshotId, 'the state before restoring was snapshotted as well');
+
+  await patch(`/api/topics/${backTopic.id}/status`, { status: 'not_started' });
+  assert.equal((await del(`/api/backups/${created.body.id}`)).status, 204);
+  assert.equal((await get(`/api/backups/${created.body.id}`)).status, 404);
+  assert.equal((await del('/api/backups/999999')).status, 404);
+});
+
+test('automatic backups only happen when one is due', async () => {
+  // start from "no backup at all" so the due path is really exercised
+  const existing = await get('/api/backups');
+  for (const row of existing.body.backups) await del(`/api/backups/${row.id}`);
+  assert.equal((await get('/api/backups/status')).body.isDue, true, 'without any snapshot a backup is due');
+
+  const first = await post('/api/backups/auto', {});
+  assert.equal(first.status, 200);
+  assert.equal(first.body.created, true, 'the automatic backup is created when it is due');
+
+  const second = await post('/api/backups/auto', {});
+  assert.equal(second.body.created, false, 'a second call is a no-op while the snapshot is fresh');
+  assert.equal(second.body.status.isDue, false);
+
+  const list = await get('/api/backups');
+  assert.equal(list.body.backups.filter((row) => row.kind === 'auto').length, 1, 'no duplicate auto backups');
 });

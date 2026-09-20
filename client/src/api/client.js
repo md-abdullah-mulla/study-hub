@@ -94,6 +94,29 @@ export const api = {
 
   analytics: () => request('/analytics'),
 
+  advancedAnalytics: () => request('/analytics/advanced'),
+  updateProfile: (data) => request('/profile', { method: 'PATCH', body: data }),
+
+  backups: {
+    list: () => request('/backups'),
+    status: () => request('/backups/status'),
+    create: (kind, label) => request('/backups', { method: 'POST', body: { kind, label } }),
+    autoIfDue: () => request('/backups/auto', { method: 'POST', body: {} }),
+    get: (id) => request(`/backups/${id}`),
+    restore: (id) => request(`/backups/${id}/restore`, { method: 'POST', body: { confirm: true } }),
+    remove: (id) => request(`/backups/${id}`, { method: 'DELETE' }),
+  },
+
+  exams: {
+    list: (limit) => request(`/exams${qs({ limit })}`),
+    stats: () => request('/exams/stats'),
+    availability: (scope) => request(`/exams/availability${qs(scope ?? {})}`),
+    create: (data) => request('/exams', { method: 'POST', body: data }),
+    get: (id) => request(`/exams/${id}`),
+    submit: (id, data) => request(`/exams/${id}/submit`, { method: 'POST', body: data }),
+    remove: (id) => request(`/exams/${id}`, { method: 'DELETE' }),
+  },
+
   studyContent: {
     all: (limit) => request(`/study-content${qs({ limit })}`),
     kinds: () => request('/study-content/kinds'),

@@ -102,10 +102,48 @@ service, repository ফাইলগুলোই ব্রাউজারে চ�
 | **Quiz** — chapter-wise MCQ / সত্য-মিথ্যা / সংক্ষিপ্ত / Viva, স্কোর + accuracy, **দুর্বল topic**, revision suggestion | ✅ **নতুন (Phase 3)** |
 | **🖼️ Create Illustration (AI Image Prompt Generator)** — প্রতি topic-এর পাশে button, ৫ ধরনের illustration, topic-specific English prompt, edit + copy + regenerate; **কোনো AI API বা API key লাগে না** | ✅ **সম্পূর্ণ (Phase 4-এর প্রথম feature)** |
 | **✨ Study Content (AI Assistant)** — প্রতি topic-এর পাশে button → নয়টা part (সংজ্ঞা, ব্যাখ্যা, point, উদাহরণ, পরীক্ষার উত্তর, সম্ভাব্য প্রশ্ন, MCQ, Viva, রিভিশন সামারি), save / edit / copy / regenerate / delete, AI note আলাদা; **কোনো AI API বা API key লাগে না** | ✅ **নতুন (Phase 4-এর দ্বিতীয় feature)** |
-| **Exam Mode**, আর সত্যিকারের AI API দিয়ে content (তোমার API key লাগবে) | ⏳ Phase 5 — "Coming soon" পেজে কী আসবে লেখা আছে |
+| **📝 Exam Mode** — subject / chapter / topic ধরে নিজে পরীক্ষা বানাও (প্রশ্ন সংখ্যা ১–৫০, সময় ১–৩০০ মিনিট), টাইমার + progress, জমা দিলে ফলাফল, দ্বিতীয়বার জমা দেওয়া যায় না, আগের পরীক্ষাগুলোর ফল সংরক্ষিত; প্রতি পরীক্ষায় badge দেখায় প্রশ্নটা pattern-based নাকি তোমার নিজের প্রশ্ন ব্যাংক থেকে | ✅ **নতুন (Task 2)** |
+| **📈 Advanced Analytics** — subject-wise progress + accuracy, exam trend, daily/weekly/monthly activity, correct vs wrong, revision stage-wise হিসাব, weak/strong topic-এর রায় (৩টির কম উত্তর হলে রায় দেয় না — অনুমান করে না) | ✅ **নতুন (Task 3)** |
+| **Insight Card (Dashboard)** — dashboard-এর উপরেই accuracy, exam গড়, topic complete, streak + সর্বোচ্চ ৩টি insight, চাইলে পুরো analytics-এ যাওয়ার লিংক | ✅ **নতুন (Task 3)** |
+| **🧾 PDF Report (`/report`)** — student name (Settings থেকে), তারিখ, overall progress, subject/chapter performance, exam result, দুর্বল-শক্ত topic, study statistics — ব্রাউজারের Print → Save as PDF দিয়ে **বাংলা ঠিকভাবে** বসে (ছবি নয়, আসল লেখা, তাই খোঁজাও যায়) | ✅ **নতুন (Task 4)** |
+| **Auto Backup** — অ্যাপ চালু হলেই নিজে নিজে snapshot (১২ ঘণ্টা পেরোলে), সর্বশেষ ৫টি auto + ১০টি manual snapshot রাখে; download / restore / delete; restore-এর আগে safety snapshot + confirm; ডেটাবেস নষ্ট হলে app নিজেই recovery screen দেয় | ✅ **নতুন (Task 4)** |
+| সত্যিকারের AI API দিয়ে content, আর prompt থেকে সত্যিকারের ছবি generation (তোমার API key লাগবে) | ⏳ Phase 5 — architecture আলাদা রাখা আছে, শুধু একটা function যোগ করলেই হবে |
 
 Semester-এর শুরুতে দেওয়া structure-টাই লোড করা আছে: **৫ subject / ১৩ chapter / ৭৭ topic**
 (Computer Network, IoT & IoT Architecture, DBMS, Microcontroller, Security-Based Surveillance System)।
+
+---
+
+## 🔧 এই ধাপে যা যোগ হলো (Task 1 → 4)
+
+**1) ভুল concept match ঠিক করা** — Illustration prompt generator আগে "Architecture concepts",
+"Harvard vs Von Neumann architecture", "RISC vs CISC", "Interrupt vector table" লেখাগুলোকে
+কখনো ভুল family-র সাথে মিলিয়ে ফেলত। এখন প্রতিটি entry-তে `family` + `strong` + `weight` আছে
+(`services/illustration/conceptLibrary.js`), আর selection হয় family gate
+(`detectSubjectFamily()` / `matchesFamily()` দিয়ে — `services/illustration/topicAnalyzer.js`)
+পেরিয়ে weighted weight অনুযায়ী। ফলে ওই চারটা লেখা এখন যথাক্রমে
+`mcu-architecture`, `harvard-von-neumann`, `risc-cisc`, `interrupt-vector-table` prompt পায় —
+server test দিয়ে যাচাই করা।
+
+**2) Exam Mode** — `POST /api/exams` (subject/chapter/topic, ১–৫০ প্রশ্ন, ১–৩০০ মিনিট) →
+`GET /api/exams`, `/stats`, `/availability`, `/:id`; `POST /:id/submit` (দ্বিতীয়বার দিলে 400),
+`DELETE /:id`। ফ্রন্টএন্ডে `/exam` পেজ + `ExamRunner`। পরীক্ষার হিসাব বাস্তবসম্মত — কোনো extra
+study load চাপিয়ে দেয় না, আর প্রশ্ন কোথা থেকে এসেছে সেটা সবসময় badge-এ দেখা যায় (এটা কখনো লুকায় না)।
+
+**3) Advanced Analytics** — `services/advancedAnalyticsService.js` + `GET /api/analytics/advanced`।
+UI: `pages/AnalyticsPage.jsx` + `components/analytics/AdvancedAnalytics.jsx` +
+dashboard-এর `components/dashboard/InsightCard.jsx`। গুরুত্বপূর্ণ নীতি: **যেটা measure করা যায়নি
+সেটা নিয়ে রায় দেওয়া হয় না** — `WEAK_ACCURACY 60`, `MIN_ANSWERS_FOR_VERDICT 3`; অর্থাৎ ৩টির কম
+উত্তর থাকলে weak topic বলা হয় না, বরং "যথেষ্ট ডেটা নেই" দেখায়।
+
+**4) PDF Report + Auto Backup** — `pages/ReportPage.jsx` (`/report` route, `@media print` CSS:
+toolbar `.no-print`, body `.print-area`)। Backup: `repositories/backupRepo.js` +
+`services/backupService.js` / `restoreService.js` + `/api/backups` (১২ ঘণ্টা পরে due,
+৫টি auto + ১০টি manual রাখে, restore-এ `confirm:true` + আগে safety snapshot)।
+Client-এ `components/backup/AutoBackupCard.jsx` (Settings), `lib/backup.js` — server mode-এ
+`/api/backups`, offline (Pages/Vercel) mode-এ `recovery-<ISO>` নামে IndexedDB-তে কাঁচা DB copy (৩টি রাখে),
+আর `main.jsx`-এ DB নষ্ট হলে recovery screen। Student-এর নাম রিপোর্টে hardcoded নয় —
+Settings → `PATCH /api/profile` → `/api/meta` থেকেই বসে (`meta.studentName`)।
 
 ---
 
@@ -113,12 +151,12 @@ Semester-এর শুরুতে দেওয়া structure-টাই লো
 
 | Test | ফল |
 |---|---|
-| Server API test (Node-এ) | ✅ 42/42 |
+| Server API test (Node-এ) | ✅ 53/53 |
 | Browser-mode backend test (sql.js) | ✅ 7/7 |
-| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 45/45 |
-| Server-mode full UI smoke (timer + analytics + quiz + illustration + study content সহ) | ✅ 82/82 |
-| oxlint | ✅ 0 warning, 0 error |
-| Production + Pages build | ✅ ঠিকঠাক |
+| **Offline UI smoke (server ছাড়া — live app যেমন)** | ✅ 61/61 |
+| Server-mode full UI smoke (timer + analytics + quiz + illustration + study content + exam + report + backup সহ) | ✅ 123/123 |
+| oxlint | ✅ 0 warning, 0 error (78 files) |
+| Production + Pages + Vercel build | ✅ ঠিকঠাক (`dist/`, `dist-vercel/`) |
 
 যাচাই করা হয়েছে: লাইভ সাইটের সব ফাইল (HTML, JS, CSS, WASM, favicon) **200 OK**,
 deep link (যেমন `/subjects/4`) ঠিকঠাক খোলে, আর লাইভ bundle-এর MD5 hash
@@ -139,10 +177,37 @@ npm run build:pages            # dist/ তৈরি করবে (404.html + .no
 নামে রাখলে প্রতি push-এ নিজে নিজে deploy হবে। (এটা এই token দিয়ে করা যায়নি —
 token-এ `workflow` permission নেই; GitHub web-এ ফাইলটা বানালেই হবে।)
 
+### Vercel-এ deploy (একই অ্যাপ, offline Mode-এ)
+
+GitHub Pages-এ অ্যাপ যেমন চলে (in-browser database, server লাগে না), Vercel-এও ঠিক তেমনি চলবে —
+তাই আসল API/Vercel-এর database সেটআপ লাগে না, অ্যাপ নিজেই ব্রাউজারে data রাখে।
+
+```bash
+cd ~/study-hub/client
+npm run build:vercel           # dist-vercel/ তৈরি করবে (.env.vercel → VITE_API_MODE=local)
+# Vercel CLI দিয়ে: project root = client/, Output Directory = dist-vercel
+#   (client/vercel.json-এ buildCommand, SPA rewrite আর asset cache header সেট করা আছে)
+```
+
+`client/vercel.json`-এ সব রুট `/index.html`-এ rewrite করা আছে, তাই `/subjects/4`, `/report`,
+`/exam`-এর মতো deep link-ও সরাসরি খুলবে। deploy কমান্ড (token শুধু environment-এ, কখনো repo-তে নয়):
+
+```bash
+cd ~/study-hub/client
+VERCEL_TOKEN=*** npx vercel@latest --prod --yes
+```
+
 ---
 
-## পরের ধাপে যা করতে পারি (Phase 2 → 5)
+## বাকি যা আছে
 
-1. **Phase 2 — Study Session Tracker:** timer দিয়ে পড়া track (subject/chapter/topic, সময়, confidence, revision needed) → তার থেকে daily/weekly analytics, streak, longest streak।
-2. **Phase 3 — Quiz System:** MCQ/True-False/Short/Viva, score + accuracy, weak topic বের করা, সেই অনুযায়ী revision suggestion, Exam Mode (বাস্তবসম্মত schedule)।
-4. **Phase 5 — AI Illustration (image generation):** এখন prompt generator হয়েছে; Phase 5-এ ওই prompt সোজা AI image API-তে পাঠিয়ে ছবি generate → preview → save → download হবে। architecture আগেই আলাদা রাখা হয়েছে (`illustrationPromptService.js`-এ শুধু একটা function যোগ করলেই হবে)। সাথে advanced analytics + PDF export।
+সম্পূর্ণ হয়েছে: Phase 1 (structure + progress), Phase 2 (session tracker + analytics),
+Phase 3 (quiz), Phase 4-এর দুই feature (illustration prompt + Study Content), তারপর
+Exam Mode, Advanced Analytics, PDF Report + Auto Backup। অর্থাৎ spec-এর প্রায় ৯০% API ছাড়াই
+হয়ে গেছে।
+
+বাকি:
+
+1. **Study Material** — database table (`study_materials`) আছে, কিন্তু UI/API এখনো বানানো হয়নি (নোট আলাদা আছে)।
+2. **সত্যিকারের AI API-র content:** তোমার OpenAI/Gemini/Claude API key লাগবে — key ছাড়া যেটা সম্ভব (hand-written Bangla knowledge + template) সেটা Phase 4-এ করা হয়েছে, আর সেভ করা content সবসময় "pattern-based draft, একবার মিলিয়ে নাও" লেবেল নিয়ে থাকে।
+3. **Prompt থেকে সত্যিকারের ছবি:** এখন prompt generator হয়েছে; Phase 5-এ ওই prompt সোজা AI image API-তে পাঠিয়ে ছবি generate → preview → save → download হবে। architecture আগেই আলাদা রাখা হয়েছে (`illustrationPromptService.js`-এ শুধু একটা function যোগ করলেই হবে)। সাথে advanced analytics + PDF export।

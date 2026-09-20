@@ -4,6 +4,7 @@ import { RecommendationCard } from '../components/dashboard/RecommendationCard.j
 import { TodayPlanCard } from '../components/dashboard/TodayPlanCard.jsx';
 import { RevisionDueCard } from '../components/dashboard/RevisionDueCard.jsx';
 import { RecentActivityCard } from '../components/dashboard/RecentActivityCard.jsx';
+import InsightCard from '../components/dashboard/InsightCard.jsx';
 import { useAppData } from '../state/AppDataContext.jsx';
 import { todayTitle } from '../lib/format.js';
 
@@ -36,6 +37,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
+        <InsightCard />
+
         <RevisionDueCard items={revisionDue} />
         <RecentActivityCard items={recentActivity} />
       </div>

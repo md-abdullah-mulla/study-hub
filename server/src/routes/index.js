@@ -5,6 +5,7 @@ import { buildDashboard } from '../services/dashboardService.js';
 import { globalSearch } from '../services/searchService.js';
 import { parseImportText, applyImport } from '../services/importService.js';
 import { buildBackup, topicsToCsv } from '../services/exportService.js';
+import { buildAdvancedAnalytics } from '../services/advancedAnalyticsService.js';
 import { statusRouter } from './statusRoutes.js';
 import { subjectRouter } from './subjectRoutes.js';
 import { chapterRouter } from './chapterRoutes.js';
@@ -14,9 +15,12 @@ import { planRouter } from './planRoutes.js';
 import { sessionRouter } from './sessionRoutes.js';
 import { quizRouter, quizResultRouter } from './quizRoutes.js';
 import { studyContentRouter } from './contentRoutes.js';
+import { examRouter } from './examRoutes.js';
+import { backupRouter } from './backupRoutes.js';
 import { STATUS_LABELS_BN, IMPORTANCE } from '../domain/constants.js';
 import { ILLUSTRATION_TYPES } from '../services/illustration/promptBuilder.js';
-import { asyncHandler } from '../utils/http.js';
+import { userRepo } from '../repositories/userRepo.js';
+import { asyncHandler, requireFields } from '../utils/http.js';
 
 export function apiRouter({ getUserId }) {
   const router = Router();
@@ -24,7 +28,7 @@ export function apiRouter({ getUserId }) {
   // ---- meta (labels used by the UI) --------------------------------------
   router.get(
     '/meta',
-    asyncHandler(async (_req, res) => {
+    asyncHandler(async (req, res) => {
       res.json({
         appName: 'Smart Semester Study Manager',
         semester: 6,
@@ -32,8 +36,18 @@ export function apiRouter({ getUserId }) {
         topicStatusLabels: STATUS_LABELS_BN,
         importanceLevels: IMPORTANCE,
         illustrationTypes: ILLUSTRATION_TYPES,
+        studentName: userRepo.findById(getUserId(req))?.name ?? 'Student',
         phase: 2,
       });
+    })
+  );
+
+  // ---- student profile (used by the printable report) --------------------
+  router.patch(
+    '/profile',
+    asyncHandler(async (req, res) => {
+      requireFields(req.body, ['name']);
+      res.json(userRepo.updateName(getUserId(req), String(req.body.name).trim()));
     })
   );
 
@@ -51,6 +65,14 @@ export function apiRouter({ getUserId }) {
     '/progress-tree',
     asyncHandler(async (req, res) => {
       res.json(buildProgressTree(getUserId(req)));
+    })
+  );
+
+  // ---- advanced analytics (Phase 5: performance, trends, insights) --------
+  router.get(
+    '/analytics/advanced',
+    asyncHandler(async (req, res) => {
+      res.json(buildAdvancedAnalytics(getUserId(req)));
     })
   );
 
@@ -114,6 +136,8 @@ export function apiRouter({ getUserId }) {
   router.use('/quizzes', quizRouter({ getUserId }));
   router.use('/quiz-results', quizResultRouter({ getUserId }));
   router.use('/study-content', studyContentRouter({ getUserId }));
+  router.use('/exams', examRouter({ getUserId }));
+  router.use('/backups', backupRouter({ getUserId }));
 
   return router;
 }

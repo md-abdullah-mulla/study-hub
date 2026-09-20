@@ -18,6 +18,8 @@ import QuizPage from './pages/QuizPage.jsx';
 import QuizDetailPage from './pages/QuizDetailPage.jsx';
 import QuizResultPage from './pages/QuizResultPage.jsx';
 import AiAssistantPage from './pages/AiAssistantPage.jsx';
+import ExamPage from './pages/ExamPage.jsx';
+import ReportPage from './pages/ReportPage.jsx';
 import { EmptyState } from './components/ui/index.jsx';
 
 /**
@@ -48,6 +50,8 @@ export default function App() {
             <Route path="/quiz/results/:resultId" element={<QuizResultPage />} />
             <Route path="/quiz/:quizId" element={<QuizDetailPage />} />
             <Route path="/ai" element={<AiAssistantPage />} />
+            <Route path="/exam" element={<ExamPage />} />
+            <Route path="/report" element={<ReportPage />} />
             <Route
               path="*"
               element={

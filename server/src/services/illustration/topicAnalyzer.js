@@ -16,6 +16,30 @@ import { CONCEPT_ENTRIES, STOPWORDS } from './conceptLibrary.js';
  * same generator run on the server and inside the browser-only Pages build.
  */
 
+/**
+ * Which subject family a topic belongs to.
+ *
+ * This is the rule that stops one subject's knowledge from leaking into another
+ * subject's topic: a concept is only used when its own family matches the topic's
+ * subject (or when the topic name itself is unambiguous — see `matchesFamily`).
+ * The order matters: "Security-Based Surveillance System" must be security, not
+ * IoT, and "IoT & IoT Architecture" must stay IoT even though it says
+ * "architecture".
+ */
+const FAMILY_RULES = [
+  { family: 'security', test: /\b(security|surveillance|cctv|access control)\b/i },
+  { family: 'dbms', test: /\b(dbms|database|rdbms|sql)\b/i },
+  { family: 'microcontroller', test: /\b(microcontroller|microprocessor|embedded|8051|avr|pic|interrupt)\b/i },
+  { family: 'network', test: /\b(computer network|networking|data communication|network)\b/i },
+  { family: 'iot', test: /\b(iot|internet of things|smart device|sensor)\b/i },
+];
+
+export function detectSubjectFamily(subjectName = '', chapterName = '') {
+  const text = `${subjectName} ${chapterName}`;
+  for (const rule of FAMILY_RULES) if (rule.test.test(text)) return rule.family;
+  return 'unknown';
+}
+
 /** How the picture should be laid out, decided from the words themselves. */
 const SIGNAL_RULES = [
   { signal: 'comparison', test: /\b(vs|versus|difference|compare|advantages?\b.*disadvantages?|ডিফারেন্স)/i },
@@ -125,24 +149,59 @@ export function analyzeTopic({
   // subject title is just context (the subject "IoT & IoT Architecture" contains
   // the word "architecture"), so it is used only when the topic itself matched
   // nothing: otherwise an MQTT prompt would be diluted with layer diagrams.
-  const scored = CONCEPT_ENTRIES.map((entry) => ({
+  const subjectFamily = detectSubjectFamily(subjectName, chapterName);
+
+  /**
+   * May this concept be used for this topic?
+   *  - same family            → yes
+   *  - family 'general'       → yes (protocol basics, embedded systems …)
+   *  - unknown subject family → yes (a custom subject still gets real content)
+   *  - another family         → only when the topic's OWN name is unambiguous
+   *                             (entry.strong), e.g. a "File System" topic
+   *                             wherever it is taught
+   */
+  const matchesFamily = (entry, name) => {
+    if (entry.family !== 'security' && entry.family !== 'dbms' && entry.family !== 'microcontroller'
+        && entry.family !== 'network' && entry.family !== 'iot') return true;
+    if (!entry.family || entry.family === 'general' || subjectFamily === 'unknown') return true;
+    if (entry.family === subjectFamily) return true;
+    return Boolean(entry.strong?.test(name));
+  };
+  const weightOf = (entry) => entry.weight ?? 1;
+
+  const scored = CONCEPT_ENTRIES.filter((entry) => matchesFamily(entry, topicName)).map((entry) => ({
     entry,
-    topicLevel:
-      (entry.match.test(topicName) ? 2 : 0) + (entry.match.test(description ?? '') ? 1 : 0),
-    contextLevel: (entry.match.test(chapterName) ? 1 : 0) + (entry.match.test(subjectName) ? 0.5 : 0),
+    nameLevel: entry.match.test(topicName) ? 2 * weightOf(entry) : 0,
+    descriptionLevel: entry.match.test(description ?? '') ? 1 * weightOf(entry) : 0,
+    contextLevel:
+      (entry.match.test(chapterName) ? 1 : 0) + (entry.match.test(subjectName) ? 0.5 : 0),
   }));
 
-  const bestTopicLevel = scored.reduce((best, item) => Math.max(best, item.topicLevel), 0);
-  const matched = bestTopicLevel
-    ? scored.filter((item) => item.topicLevel === bestTopicLevel).map((item) => item.entry)
-    : scored
-        .filter((item) => item.contextLevel > 0)
-        .sort((a, b) => b.contextLevel - a.contextLevel)
-        .slice(0, 1)
-        .map((item) => item.entry);
+  // Selection order: the topic's own name first (most specific entry wins, so
+  // "Interrupt vector table" picks the vector-table concept, not the general
+  // interrupt one), then the description, then the chapter/subject context.
+  const pickBest = (field) => {
+    const best = scored.reduce((max, item) => Math.max(max, item[field]), 0);
+    return best > 0 ? { best, entries: scored.filter((item) => item[field] === best).map((item) => item.entry) } : null;
+  };
+  const byName = pickBest('nameLevel');
+  const byDescription = byName ? null : pickBest('descriptionLevel');
+  const matched = byName?.entries?.length
+    ? byName.entries
+    : byDescription?.entries?.length
+      ? byDescription.entries
+      : scored
+          .filter((item) => item.contextLevel > 0)
+          .sort((a, b) => b.contextLevel - a.contextLevel)
+          .slice(0, 1)
+          .map((item) => item.entry);
 
   if (!matched.length) {
-    return { ...deriveProfile({ topicName, topicNameBn, description, chapterName, subjectName, signal }), signal };
+    return {
+      ...deriveProfile({ topicName, topicNameBn, description, chapterName, subjectName, signal }),
+      signal,
+      subjectFamily,
+    };
   }
 
   // Several entries at the same level are genuinely one topic: "File System vs
@@ -164,6 +223,7 @@ export function analyzeTopic({
     relationships,
     keywords: joinList(matched.flatMap((entry) => entry.keywords), 6),
     signal,
+    subjectFamily,
     topicNameBn: topicNameBn || null,
   };
 }

@@ -61,3 +61,54 @@
     @apply bg-brand-50 text-brand-700 hover:bg-brand-50;
   }
 }
+
+
+/* ---------------------------------------------------------------------------
+   PDF report ("Export Report as PDF")
+   The browser prints these rules, so the PDF keeps real Bangla text, table
+   borders and page margins instead of being a screenshot of the app.
+--------------------------------------------------------------------------- */
+@media print {
+  .no-print,
+  nav,
+  aside,
+  header.app-header,
+  footer {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .print-area {
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .print-area section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-area table {
+    font-size: 11px;
+  }
+
+  a[href]::after {
+    content: '';
+  }
+
+  @page {
+    margin: 14mm;
+  }
+}

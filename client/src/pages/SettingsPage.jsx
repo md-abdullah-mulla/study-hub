@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Download, Database, Info, FileSpreadsheet, RotateCcw, Loader2 } from 'lucide-react';
 import { Card, CardHeader, StatCard } from '../components/ui/index.jsx';
 import { useAppData } from '../state/AppDataContext.jsx';
+import AutoBackupCard from '../components/backup/AutoBackupCard.jsx';
 import { useToast } from '../state/ToastContext.jsx';
 import { api } from '../api/client.js';
 import { downloadFromApi } from '../browser-db/download.js';
@@ -46,9 +47,29 @@ function ExportTile({ icon: Icon, iconClass, title, description, fileName, path,
 }
 
 export default function SettingsPage() {
-  const { meta, subjects, semester } = useAppData();
+  const { meta, subjects, semester, refresh } = useAppData();
   const totalChapters = subjects.reduce((n, s) => n + s.chapters.length, 0);
   const localMode = isLocalApiMode;
+  const toast = useToast();
+  const [studentName, setStudentName] = useState(meta?.studentName ?? '');
+  const [nameBusy, setNameBusy] = useState(false);
+
+  useEffect(() => {
+    if (meta?.studentName) setStudentName(meta.studentName);
+  }, [meta?.studentName]);
+
+  const saveName = async () => {
+    setNameBusy(true);
+    try {
+      await api.updateProfile({ name: studentName.trim() });
+      toast.success('নাম save হলো — report-এ এটাই দেখাবে');
+      await refresh?.();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setNameBusy(false);
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -78,8 +99,28 @@ export default function SettingsPage() {
           <p className="muted">
             {localMode
               ? 'এই version-এ তোমার ডেটা ব্রাউজারের IndexedDB-তে থাকে (কোনো server নেই)। তাই মাঝে মাঝে JSON backup নামিয়ে রাখা জরুরি — ব্রাউজার data clear করলে বা অন্য ব্রাউজারে গেলে progress থাকবে না।'
-              : 'PDF export আর auto-backup Phase 5-এ যোগ হবে। এখন JSON/CSV দিয়ে নিজে backup রাখো।'}
+              : 'Auto-backup নিচে চালু আছে — ১২ ঘণ্টা পর পর নিজে থেকেই snapshot নেওয়া হয়, আর যেকোনো snapshot থেকে ফিরিয়ে আনা যায়।'}
           </p>
+        </div>
+      </Card>
+
+      <AutoBackupCard />
+
+      <Card>
+        <CardHeader title="Student name" subtitle="PDF report-এর উপরে তোমার নামটা দেখাবে" icon={Info} />
+        <div className="flex flex-wrap items-end gap-3 p-4 sm:p-5">
+          <label className="block min-w-56 flex-1">
+            <span className="label">নাম</span>
+            <input
+              className="input"
+              value={studentName}
+              onChange={(event) => setStudentName(event.target.value)}
+              placeholder="তোমার নাম"
+            />
+          </label>
+          <button className="btn-primary" onClick={saveName} disabled={nameBusy || !studentName.trim()}>
+            Save
+          </button>
         </div>
       </Card>
 

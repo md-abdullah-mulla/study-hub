@@ -17,11 +17,23 @@
  *   flow          ordered steps (used by Process Flow / Architecture diagrams)
  *   relationships how the parts connect (arrows, direction, meaning)
  *   keywords      terminology worth keeping visible in the picture
+ *   family        which subject family this concept belongs to (iot | network | dbms |
+ *                 microcontroller | security | general). The analyzer NEVER uses a
+ *                 concept from another family for a topic, which is what stops
+ *                 "Interrupt vector table" (microcontroller) from being answered with
+ *                 DBMS content just because both contain the word "table".
+ *   strong        the unambiguous part of `match`. A topic may borrow a concept from
+ *                 another family only when its own name matches `strong`
+ *                 (e.g. a "File System" topic inside any subject).
+ *   weight        how specific the entry is (default 1). A more specific entry wins
+ *                 the topic ("Interrupt vector table" → the vector-table entry, not
+ *                 the general interrupt entry).
  */
 export const CONCEPT_ENTRIES = [
   {
     id: 'mqtt',
     match: /\bmqtt\b/i,
+    family: 'iot',
     concept:
       'MQTT is a lightweight publish/subscribe messaging protocol that lets small IoT devices exchange data through a central broker instead of talking to each other directly.',
     components: [
@@ -46,6 +58,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'coap',
     match: /\bcoap\b/i,
+    family: 'iot',
     concept:
       'CoAP is a lightweight request/response protocol designed for constrained IoT devices, following the same client-server idea as HTTP but with much smaller messages over UDP.',
     components: [
@@ -70,6 +83,8 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'iot-layers',
     match: /\b(layers?|architecture)\b/i,
+    family: 'iot',
+    strong: /\b(iot\s*layers?)\b/i,
     concept:
       'IoT architecture is a layered system: devices sense the physical world, a network carries their data, and applications process it for the user.',
     components: [
@@ -93,6 +108,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'edge-cloud',
     match: /\b(edge|cloud)\s*(computing|layer|server)?\b/i,
+    family: 'iot',
     concept:
       'Edge computing processes data near the device, while cloud computing processes it in a central data centre; IoT systems usually use both.',
     components: [
@@ -117,6 +133,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'sensor',
     match: /\b(sensor|actuator|transducer)\b/i,
+    family: 'iot',
     concept:
       'A sensor converts a physical quantity (temperature, light, motion) into an electrical signal that a controller can read.',
     components: [
@@ -140,6 +157,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'communication-protocol',
     match: /\b(communication protocols?|http|tcp|udp|zigbee|bluetooth)\b/i,
+    family: 'general',
     concept:
       'IoT communication protocols define how devices exchange data: who may talk, in what format, and what happens if a message is lost.',
     components: [
@@ -163,6 +181,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'computer-network',
     match: /\b(network|lan|wan|internet|topology)\b/i,
+    family: 'network',
     concept:
       'A computer network connects devices so they can share data and resources; data travels from a sender through network devices to a receiver.',
     components: [
@@ -187,6 +206,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'client-server',
     match: /\b(client[\s/-]*server|client)\b/i,
+    family: 'network',
     concept:
       'In the client-server model, a client requests a service and a server provides it; many clients can use one central server.',
     components: [
@@ -211,6 +231,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'peer-to-peer',
     match: /\b(peer[\s-]*to[\s-]*peer|p2p)\b/i,
+    family: 'network',
     concept:
       'In a peer-to-peer network every device acts as both client and server, so there is no single central server.',
     components: [
@@ -234,6 +255,8 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'dbms',
     match: /\b(dbms|rdbms|database|sql|table|query|normalization)\b/i,
+    family: 'dbms',
+    strong: /\b(dbms|rdbms|database|sql|normalization)\b/i,
     concept:
       'A DBMS is software that stores data in an organised way and answers queries, so users and applications never handle raw files themselves.',
     components: [
@@ -258,6 +281,8 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'file-system',
     match: /\bfile\s*system\b/i,
+    family: 'dbms',
+    strong: /\bfile\s*system\b/i,
     concept:
       'A file system stores data as files in folders, while a DBMS stores structured data with rules and query support — this contrast is what the diagram should show.',
     components: [
@@ -280,6 +305,8 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'microcontroller',
     match: /\b(microcontroller|cpu|8051|avr|pic|processor)\b/i,
+    family: 'microcontroller',
+    strong: /\b(microcontroller|8051|avr|pic)\b/i,
     concept:
       'A microcontroller is a small single-chip computer: it reads inputs, runs a stored program and drives outputs.',
     components: [
@@ -304,6 +331,8 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'memory-organization',
     match: /\bmemory\b/i,
+    family: 'microcontroller',
+    strong: /\b(memory)\b/i,
     concept:
       'Microcontroller memory is organised by purpose: program code lives in ROM/flash, temporary data in RAM, and the CPU reaches both over the address and data bus.',
     components: [
@@ -328,6 +357,8 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'timer-interrupt',
     match: /\b(timer|counter|interrupt)\b/i,
+    family: 'microcontroller',
+    strong: /\b(interrupt|timer|counter)\b/i,
     concept:
       'Timers count clock pulses to measure time, counters count external events, and interrupts let the CPU react to an event immediately.',
     components: [
@@ -351,7 +382,9 @@ export const CONCEPT_ENTRIES = [
   },
   {
     id: 'io-port',
-    match: /\b(i\/o|input[\s/-]*output|port programming|adc|pwm)\b/i,
+    match: /\b(i\/o|input[\s/-]*output|output port|input port|port programming|port pin)\b/i,
+    family: 'microcontroller',
+    strong: /\b(i\/o|input[\s/-]*output|port programming)\b/i,
     concept:
       'I/O ports connect a microcontroller to the outside world; ADC converts analog sensor voltage into numbers and PWM produces a controllable pulse output.',
     components: [
@@ -376,6 +409,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'serial-parallel',
     match: /\b(serial|parallel|uart|spi|i2c)\b/i,
+    family: 'microcontroller',
     concept:
       'Serial communication sends bits one after another on a single line, while parallel communication sends several bits at the same time on separate lines.',
     components: [
@@ -399,6 +433,8 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'surveillance',
     match: /\b(surveillance|cctv|camera|monitoring)\b/i,
+    family: 'security',
+    strong: /\b(surveillance|cctv|camera)\b/i,
     concept:
       'A security surveillance system captures video or sensor data on site, sends it over a network, and lets an operator watch or be alerted remotely.',
     components: [
@@ -423,6 +459,8 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'access-control',
     match: /\b(access control|authentication|authorization|security)\b/i,
+    family: 'security',
+    strong: /\b(access control|authentication|authorization)\b/i,
     concept:
       'Access control decides who may enter a place or use a resource: identity is checked first, then permission is granted or denied.',
     components: [
@@ -447,6 +485,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'embedded-system',
     match: /\b(embedded|real[\s-]*time|firmware)\b/i,
+    family: 'general',
     concept:
       'An embedded system is a computer built inside a device to do one job reliably, usually reacting to sensors in real time.',
     components: [
@@ -471,6 +510,7 @@ export const CONCEPT_ENTRIES = [
   {
     id: 'iot-general',
     match: /\b(iot|internet of things|smart device|smart home)\b/i,
+    family: 'iot',
     concept:
       'An IoT system connects everyday devices to the internet so they can sense, report and be controlled remotely.',
     components: [
@@ -491,6 +531,170 @@ export const CONCEPT_ENTRIES = [
       'User → app: monitoring and decisions',
     ],
     keywords: ['sensor', 'connectivity', 'cloud', 'automation'],
+  },
+  // ---- Microcontroller architecture family (added after the mapping bug) ----
+  {
+    id: 'mcu-architecture',
+    family: 'microcontroller',
+    match: /\b(architecture|processor|instruction set|alu|arithmetic logic|control unit|registers?|system bus|data bus|address bus|control bus)\b/i,
+    strong: /\b(microcontroller architecture|processor architecture|alu|control unit|register|bus)\b/i,
+    concept:
+      'Microcontroller architecture means how the parts inside a microcontroller are arranged and how they work together: the CPU (ALU + control unit) executes instructions, registers hold the working data, memory holds program and data, and the buses carry addresses, data and control signals between them.',
+    components: [
+      'CPU (the part that executes instructions)',
+      'ALU (performs arithmetic and logic operations)',
+      'Control Unit (decodes the instruction and controls every other part)',
+      'Registers (fast storage inside the CPU: accumulator, program counter, stack pointer)',
+      'Memory (Flash/ROM for the program, RAM for data)',
+      'I/O ports (connect the microcontroller to sensors, LEDs, motors)',
+      'System bus (address bus, data bus, control bus)',
+      'Clock (gives the timing for every step)',
+    ],
+    flow: [
+      'Clock starts the next machine cycle',
+      'Program Counter points to the next instruction in program memory',
+      'Control Unit fetches and decodes that instruction',
+      'ALU executes the operation using registers',
+      'Result is written back to a register or memory',
+      'Data moves in or out through the I/O ports',
+    ],
+    relationships: [
+      'CPU ↔ Memory: fetch instruction, read/write data over the data bus',
+      'Control Unit → all parts: control signals decide who does what, and when',
+      'Address bus → Memory / I/O: says which location is being used',
+      'Registers ↔ ALU: the operands go in, the result comes back',
+    ],
+    keywords: ['CPU', 'ALU', 'control unit', 'register', 'bus', 'clock', 'von Neumann'],
+  },
+  {
+    id: 'harvard-von-neumann',
+    family: 'microcontroller',
+    match: /\b(harvard|von\s*neumann|stored program|program memory vs data memory)\b/i,
+    strong: /\b(harvard|von\s*neumann)\b/i,
+    weight: 2,
+    concept:
+      'Harvard and Von Neumann are the two classic ways of organising a processor. Von Neumann uses one memory and one bus for both program (instructions) and data; Harvard uses separate memories and separate buses for program and data, so an instruction and its data can be fetched in the same cycle.',
+    components: [
+      'Harvard Architecture (separate program memory and data memory, separate buses)',
+      'Von Neumann Architecture (single memory and single bus for program and data)',
+      'Instruction bus / Instruction memory in Harvard',
+      'Data bus / Data memory in Harvard',
+      'Shared bus in Von Neumann (also called the "Von Neumann bottleneck")',
+    ],
+    flow: [
+      'Harvard: fetch instruction from program memory and read data from data memory at the same time',
+      'Harvard: execute both operations in a single machine cycle',
+      'Von Neumann: fetch the instruction first over the shared bus',
+      'Von Neumann: then read/write the data over the same bus',
+      'Von Neumann: instruction and data can never travel together',
+    ],
+    relationships: [
+      'Harvard → speed: two buses working at once, so faster execution',
+      'Harvard → cost: two memories and more pins, so a more complex circuit',
+      'Von Neumann → simplicity: one memory, cheaper and easier to design',
+      'Von Neumann → bottleneck: the single bus is shared, so it is slower',
+    ],
+    keywords: ['Harvard', 'Von Neumann', 'separate buses', 'shared bus', 'bottleneck', 'instruction cycle'],
+  },
+  {
+    id: 'risc-cisc',
+    family: 'microcontroller',
+    match: /\b(risc|cisc|reduced instruction|complex instruction)\b/i,
+    strong: /\b(risc|cisc)\b/i,
+    weight: 2,
+    concept:
+      'RISC (Reduced Instruction Set Computer) keeps the instruction set small and simple so each instruction finishes quickly, usually in one clock cycle. CISC (Complex Instruction Set Computer) uses fewer but more powerful instructions, where one instruction can do a whole job like fetching memory and adding in a single step.',
+    components: [
+      'RISC processor (small, fixed-length instruction set)',
+      'CISC processor (large, variable-length instruction set)',
+      'Instructions (one simple job each in RISC, many jobs in CISC)',
+      'Registers (RISC does most work between registers)',
+      'Memory access (small, separate load/store instructions in RISC)',
+      'Control unit (hardwired in RISC, often microcode in CISC)',
+    ],
+    flow: [
+      'RISC: fetch a short instruction',
+      'RISC: decode it in fixed hardware, usually in one cycle',
+      'RISC: perform the operation between registers',
+      'CISC: fetch a longer instruction that may include several operations',
+      'CISC: decode it through microcode into smaller internal steps',
+      'CISC: fewer instructions are needed to write the same program',
+    ],
+    relationships: [
+      'RISC → fewer cycles per instruction, more instructions per program',
+      'CISC → more cycles per instruction, fewer instructions per program',
+      'RISC → simpler hardware and lower power for the same work',
+      'CISC → shorter, compact programs that save memory',
+    ],
+    keywords: ['RISC', 'CISC', 'instruction set', 'pipelining', 'registers', 'power consumption'],
+  },
+  {
+    id: 'interrupt-vector-table',
+    family: 'microcontroller',
+    match: /\b(vector\s*table|interrupt\s*vector|vector address|isr|interrupt service routine)\b/i,
+    strong: /\b(vector|isr|interrupt service routine)\b/i,
+    weight: 2,
+    concept:
+      'The Interrupt Vector Table (IVT) is a fixed table in program memory that holds the starting address of each interrupt handler. When an interrupt occurs the CPU reads the matching entry from the table and jumps there to run the Interrupt Service Routine (ISR).',
+    components: [
+      'Interrupt Vector Table (the fixed table of handler addresses)',
+      'Vector address (the memory address stored in one table entry)',
+      'Interrupt Service Routine / ISR (the small program that handles that interrupt)',
+      'Interrupt (an event that asks the CPU to stop what it is doing)',
+      'Reset vector (the entry used when the microcontroller starts)',
+      'External interrupt entry (e.g. INT0, INT1)',
+      'Timer/counter interrupt entry',
+      'Serial communication interrupt entry (UART/USART)',
+      'Interrupt enable and flag registers',
+    ],
+    flow: [
+      'A device raises an interrupt request',
+      'The CPU finishes the current instruction and saves the return address on the stack',
+      'The CPU looks up that interrupt number in the Interrupt Vector Table',
+      'It jumps to the vector address and runs the ISR',
+      'The ISR handles the event and clears the interrupt flag',
+      'The CPU returns to the saved address and continues the main program',
+    ],
+    relationships: [
+      'Interrupt source → vector address: each source has its own fixed entry',
+      'Vector table → ISR: the address in the table points to the handler code',
+      'ISR → main program: the work is done quickly, then control goes back',
+      'Priority decides who runs first when two interrupts arrive together',
+    ],
+    keywords: ['interrupt', 'vector address', 'ISR', 'reset vector', 'priority', 'stack'],
+  },
+  {
+    id: 'adc-pwm',
+    family: 'microcontroller',
+    match: /\b(adc|a\/d|analog[\s-]*to[\s-]*digital|pwm|pulse[\s-]*width|analog input|resolution bits?)\b/i,
+    strong: /\b(adc|pwm|pulse[\s-]*width)\b/i,
+    concept:
+      'ADC (Analog to Digital Converter) turns a real-world analog voltage into a digital number the microcontroller can process. PWM (Pulse Width Modulation) does the opposite kind of trick: by switching a digital pin on and off very fast it produces an average voltage that can control motor speed, LED brightness or a heater.',
+    components: [
+      'Analog input (voltage from a sensor or potentiometer)',
+      'ADC registers (result register, control and status registers)',
+      'Resolution (e.g. 10-bit → values 0 to 1023)',
+      'Reference voltage (Vref decides the measurement range)',
+      'Conversion time / sampling',
+      'PWM timer/counter (sets the period)',
+      'Duty cycle (the percentage of the period the signal stays HIGH)',
+      'PWM output pin (drives motor, LED, servo)',
+    ],
+    flow: [
+      'ADC: the input voltage is sampled and held',
+      'ADC: successive comparison produces a digital number',
+      'ADC: the result is stored in the ADC data register for the program to read',
+      'PWM: the timer counts up to the period value',
+      'PWM: while the count is below the duty value the pin stays HIGH, then it turns LOW',
+      'PWM: the same pattern repeats every period, giving an average output level',
+    ],
+    relationships: [
+      'Analog voltage → ADC → digital value: 0 V gives 0, Vref gives the maximum value',
+      'Duty cycle → average output: 50 % duty gives about half of the supply voltage',
+      'Timer frequency → PWM frequency: the flicker of an LED depends on it',
+      'ADC resolution → accuracy: more bits mean smaller measurable steps',
+    ],
+    keywords: ['ADC', 'PWM', 'resolution', 'duty cycle', 'sampling', 'reference voltage'],
   },
 ];
 

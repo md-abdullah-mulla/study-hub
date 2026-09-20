@@ -67,5 +67,7 @@ export async function createStorage(factory = globalThis.indexedDB) {
     get: (key) => withStore('readonly', (store) => store.get(key)),
     set: (key, value) => withStore('readwrite', (store) => store.put(value, key)),
     remove: (key) => withStore('readwrite', (store) => store.delete(key)),
+    /** Every key of this store — used to list the automatic backup snapshots. */
+    keys: () => withStore('readonly', (store) => store.getAllKeys()),
   };
 }

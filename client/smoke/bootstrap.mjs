@@ -33,6 +33,14 @@ Object.defineProperty(dom.window.Document.prototype, 'oninput', { value: null, w
 dom.window.Element.prototype.attachEvent ??= function attachEvent() {};
 dom.window.Element.prototype.detachEvent ??= function detachEvent() {};
 dom.window.scrollTo = () => {};
+// Phase 5: the report page calls window.print() to make the PDF — record the
+// calls so the smoke test can prove the button really triggers printing.
+globalThis.__PRINT_CALLS__ = 0;
+dom.window.print = () => {
+  globalThis.__PRINT_CALLS__ = (globalThis.__PRINT_CALLS__ ?? 0) + 1;
+};
+globalThis.URL.createObjectURL ??= () => 'blob:smoke';
+globalThis.URL.revokeObjectURL ??= () => {};
 dom.window.matchMedia ??= () => ({
   matches: false,
   addListener() {},

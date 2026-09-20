@@ -10,7 +10,8 @@ import {
   Cell,
   CartesianGrid,
 } from 'recharts';
-import { BarChart3, TrendingDown, TrendingUp, Clock, Timer } from 'lucide-react';
+import { BarChart3, TrendingDown, TrendingUp, Clock, Timer, FileText } from 'lucide-react';
+import AdvancedAnalytics from '../components/analytics/AdvancedAnalytics.jsx';
 import { Card, CardHeader, StatCard, EmptyState } from '../components/ui/index.jsx';
 import { Donut } from '../components/ui/ProgressBar.jsx';
 import { api } from '../api/client.js';
@@ -30,9 +31,28 @@ import { minutesLabel } from '../lib/format.js';
 export default function AnalyticsPage() {
   const { subjects, semester, dashboard } = useAppData();
   const [study, setStudy] = useState(null);
+  const [advanced, setAdvanced] = useState(null);
+  const [advancedError, setAdvancedError] = useState(null);
 
   // Study analytics come from stored timer sessions (Phase 2) — nothing here is
   // estimated, so an empty database simply shows zeros.
+  // Phase 5: every number of the performance report comes from one payload, so
+  // the page can never show two different truths side by side.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .advancedAnalytics()
+      .then((data) => {
+        if (!cancelled) setAdvanced(data);
+      })
+      .catch((error) => {
+        if (!cancelled) setAdvancedError(error.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     api
@@ -263,6 +283,22 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </Card>
+
+      {/* Phase 5: performance report — measured accuracy, trends, weak/strong topics */}
+      <AdvancedAnalytics data={advanced} error={advancedError} />
+
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-ink-200 bg-white p-4">
+        <div>
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-ink-900">
+            <FileText className="h-4 w-4" />
+            এই report টা PDF হিসেবে রাখতে চাও?
+          </p>
+          <p className="muted">Print-ready report পেজ খুলে "Export Report as PDF" চাপলে browser নিজেই PDF বানাবে (Bangla ঠিকভাবে আসবে)।</p>
+        </div>
+        <Link to="/report" className="btn-primary">
+          Export Report as PDF
+        </Link>
+      </div>
     </div>
   );
 }

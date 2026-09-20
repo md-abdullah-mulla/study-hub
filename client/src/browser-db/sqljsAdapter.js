@@ -92,7 +92,8 @@ function toPositionalValues(compiled, args) {
  * @param {(bytes: Uint8Array) => void} options.onPersist  called after writes
  */
 export function createSqlJsDatabase({ SQL, data = null, onPersist, persistDelayMs = 250 }) {
-  const sqlite = data ? new SQL.Database(new Uint8Array(data)) : new SQL.Database();
+  // `let` because a backup restore swaps the whole database file at runtime
+  let sqlite = data ? new SQL.Database(new Uint8Array(data)) : new SQL.Database();
   sqlite.run('PRAGMA foreign_keys = ON');
 
   const compiledCache = new Map();
@@ -204,6 +205,18 @@ export function createSqlJsDatabase({ SQL, data = null, onPersist, persistDelayM
     transaction,
     /** bytes of the whole database — used by backups and by IndexedDB persistence */
     export: () => sqlite.export(),
+    /**
+     * Replaces the whole database with saved bytes (used by "Restore backup").
+     * The caller is expected to reload the page afterwards: every loaded module
+     * still holds the old connection.
+     */
+    replaceWith(bytes) {
+      const next = new SQL.Database(bytes);
+      sqlite.close();
+      sqlite = next;
+      persistNow();
+      return sqlite.export().length;
+    },
     flush: persistNow,
     close: () => sqlite.close(),
   };

@@ -50,6 +50,18 @@ const shortLabel = (text) =>
 const bulletList = (items) => items.map((item) => `• ${item}`).join('\n');
 const numberedList = (items) => items.map((item, index) => `${bnNumber(index + 1)}. ${item}`).join('\n');
 
+/** Comparison tables / address tables written inside the concept knowledge. */
+const tablesOf = (knowledge) => {
+  const blocks = [];
+  if (Array.isArray(knowledge?.compare) && knowledge.compare.length) {
+    blocks.push(`তুলনা টেবিল:\n${knowledge.compare.join('\n')}`);
+  }
+  if (Array.isArray(knowledge?.table) && knowledge.table.length) {
+    blocks.push(`টেবিল:\n${knowledge.table.join('\n')}`);
+  }
+  return blocks;
+};
+
 const knowledgeFor = (profile) => {
   // the first matched library entry with hand-written content wins
   for (const id of profile.matchedIds ?? []) {
@@ -95,6 +107,18 @@ const draftMode = (profile, topic, context) => {
     ],
   };
 };
+
+/**
+ * Structured MCQs for a topic (used by the content section AND by Exam Mode).
+ * Returns [{ question, options[], answer }] — options are shuffled by the
+ * caller when it matters (an exam), never here, so tests stay stable.
+ */
+export function buildMcqItems({ profile, topic, topicNameBn = '' }) {
+  const knowledge = knowledgeFor(profile);
+  const draft = knowledge ? null : draftMode(profile, topic, { chapterName: '', subjectName: '' });
+  const items = buildMcq(profile, { ...topic, name: topic.name || topicNameBn }, knowledge, Boolean(draft));
+  return items ?? [];
+}
 
 /**
  * Builds MCQs that are safe to trust: the correct option is a real part of this
@@ -214,6 +238,8 @@ export function buildStudyContent({ profile, topic, chapter, subject, kinds = CO
         lines.push('', 'কোন অংশ কার সাথে যুক্ত —');
         lines.push(bulletList(relationships));
       }
+      const tables = isDraft ? [] : tablesOf(knowledge);
+      if (tables.length) lines.push('', ...tables);
       lines.push(
         '',
         isDraft
@@ -226,10 +252,10 @@ export function buildStudyContent({ profile, topic, chapter, subject, kinds = CO
     important_points: () => {
       const source = knowledge ?? draft;
       const points = [...new Set([...(source.points ?? []), ...(draft ? [] : [])])];
-      return {
-        title: `${topic.name} — গুরুত্বপূর্ণ পয়েন্ট`,
-        body: bulletList(points.length ? points : ['(তথ্য যোগ করার জন্য জায়গা)']),
-      };
+      const body = [bulletList(points.length ? points : ['(তথ্য যোগ করার জন্য জায়গা)']), ...tablesOf(knowledge)]
+        .filter(Boolean)
+        .join('\n\n');
+      return { title: `${topic.name} — গুরুত্বপূর্ণ পয়েন্ট`, body };
     },
 
     example: () => ({

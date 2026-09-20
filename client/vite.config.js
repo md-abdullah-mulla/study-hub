@@ -7,13 +7,16 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const browserDbDir = path.join(here, 'src', 'browser-db');
 
 export default defineConfig(({ mode }) => {
-  // `vite build --mode pages` → the static GitHub Pages build, where the whole
-  // backend (SQLite as WebAssembly) runs inside the page and there is no server.
+  // Two static builds run the whole backend (SQLite as WebAssembly) inside the
+  // page, so the app needs no server at all:
+  //   --mode pages  → GitHub Pages, served from /study-hub/
+  //   --mode vercel → Vercel, served from the domain root
   const isPages = mode === 'pages';
+  const isVercel = mode === 'vercel';
 
   return {
     // Pages serves the app from /study-hub/; the dev server and other hosts use /
-    base: isPages ? '/study-hub/' : '/',
+    base: isPages ? '/study-hub/' : '/', // vercel + dev both live at the root
 
     plugins: [react()],
 
@@ -49,7 +52,7 @@ export default defineConfig(({ mode }) => {
     },
 
     build: {
-      outDir: 'dist',
+      outDir: isVercel ? 'dist-vercel' : 'dist',
       chunkSizeWarningLimit: 1600, // sql.js (the in-browser SQLite) is a large chunk by design
     },
   };

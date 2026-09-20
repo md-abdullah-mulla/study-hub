@@ -268,3 +268,54 @@ CREATE TABLE IF NOT EXISTS app_meta (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- ---------------------------------------------------------------------
+-- Exam Mode (Phase 5): a timed exam built only from the chosen
+-- subject → chapter → topic, graded automatically
+-- ---------------------------------------------------------------------
+-- questions_json holds a snapshot of the questions *with* their correct
+-- answers, so the exam keeps working (and stays gradable) even if the quiz
+-- bank is edited or deleted later. The snapshot is never sent to the client
+-- before the exam is submitted.
+CREATE TABLE IF NOT EXISTS exams (
+  id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  subject_id         INTEGER REFERENCES subjects(id) ON DELETE SET NULL,
+  chapter_id         INTEGER REFERENCES chapters(id) ON DELETE SET NULL,
+  topic_id           INTEGER REFERENCES topics(id) ON DELETE SET NULL,
+  scope_label        TEXT    NOT NULL,          -- "Subject → Chapter → Topic" as shown in the UI
+  title              TEXT    NOT NULL,
+  question_count     INTEGER NOT NULL,
+  duration_minutes   INTEGER NOT NULL,
+  status             TEXT    NOT NULL DEFAULT 'in_progress'
+                     CHECK (status IN ('in_progress','submitted')),
+  questions_json     TEXT    NOT NULL,
+  answers_json       TEXT,
+  started_at         TEXT    NOT NULL,
+  submitted_at       TEXT,
+  total              INTEGER NOT NULL DEFAULT 0,
+  correct            INTEGER NOT NULL DEFAULT 0,
+  wrong              INTEGER NOT NULL DEFAULT 0,
+  unanswered         INTEGER NOT NULL DEFAULT 0,
+  score              REAL    NOT NULL DEFAULT 0,
+  percentage         REAL    NOT NULL DEFAULT 0,
+  time_taken_seconds INTEGER,
+  weak_topic_ids_json TEXT,
+  created_at         TEXT    NOT NULL,
+  updated_at         TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_exams_user ON exams(user_id, started_at);
+
+-- ---------------------------------------------------------------------
+-- Auto backup (Phase 5): rolling snapshots of everything the student owns
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS backups (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind        TEXT    NOT NULL DEFAULT 'auto' CHECK (kind IN ('auto','manual')),
+  label       TEXT    NOT NULL,
+  size_bytes  INTEGER NOT NULL DEFAULT 0,
+  payload     TEXT    NOT NULL,          -- the same JSON the Settings download produces
+  created_at  TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_backups_user ON backups(user_id, created_at);

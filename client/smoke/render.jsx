@@ -531,6 +531,186 @@ await root.unmount();
 root = await renderAt('/notes', 1400);
 check('notes page lists the personal note written earlier', text().includes('QA note') || text().includes('আমার নোট'));
 
+// ================================================================ 16. ADVANCED ANALYTICS (Phase 5)
+await root.unmount();
+root = await renderAt('/analytics', 2600);
+page = text();
+check(
+  'analytics shows the performance report with real totals',
+  page.includes('Performance report') && page.includes('Study sessions') && page.includes('প্রশ্নের উত্তর'),
+  page.slice(0, 400)
+);
+check('the report explains what the data says (insight sentences)', page.includes('এই data থেকে যা বোঝা যাচ্ছে'), page.slice(0, 400));
+check('weak/strong topic blocks are honest when nothing was answered', page.includes('দুর্বল topic') && page.includes('শক্ত topic'));
+check('subject-wise performance lists every subject', page.includes('Subject-wise performance') && page.includes('Computer Network'));
+check('the analytics page offers the PDF export', page.includes('Export Report as PDF'));
+
+const advancedApi = await client('/api/analytics/advanced');
+check(
+  'the analytics payload carries measured numbers only',
+  typeof advancedApi.totals.topics === 'number' &&
+    advancedApi.chartData.dailyActivity.length === 14 &&
+    advancedApi.topics.weak.every((topic) => topic.answered >= 3),
+  JSON.stringify(advancedApi.totals)
+);
+check('every insight is a sentence, not a placeholder', advancedApi.insights.every((insight) => insight.length > 15));
+
+const dashboardInsight = await (async () => {
+  await root.unmount();
+  root = await renderAt('/', 2200);
+  return text();
+})();
+check('the dashboard shows an insight card with the numbers', dashboardInsight.includes('আজকের insight') && dashboardInsight.includes('topic complete'), dashboardInsight.slice(0, 300));
+
+// ================================================================ 17. PDF REPORT (Phase 5)
+await root.unmount();
+root = await renderAt('/report', 2400);
+page = text();
+// the printed name must come from the real profile (Settings → /api/meta),
+// never a hardcoded string — a wrong name on a report is worse than no name
+const profile = await client('/api/meta');
+check('the report opens with the profile student name and date', (() => {
+  const line = document.querySelector('.print-area strong');
+  return (
+    page.includes('Smart Semester Study Report') &&
+    page.includes('Report তৈরি') &&
+    line &&
+    page.includes(`Student: ${profile.studentName}`)
+  );
+})(), `meta=${profile.studentName} | ${page.slice(0, 300)}`);
+check(
+  'the report covers progress, subjects, exams, statistics, weak/strong topics',
+  ['Overall Progress', 'Subject-wise performance', 'Exam results', 'Study statistics', 'দুর্বল ও শক্ত topic', 'Revision অবস্থা'].every(
+    (heading) => page.includes(heading)
+  ),
+  page.slice(0, 500)
+);
+check('the report is a real table document, not a screenshot', document.querySelectorAll('.print-area table').length >= 4);
+// jsdom does not load the stylesheet, so the print contract is checked by class:
+// the toolbar is marked .no-print and the report body .print-area — those are
+// exactly the hooks the @media print rules in index.css use.
+check(
+  'the report marks what to hide and what to print',
+  Boolean(document.querySelector('.no-print')) && Boolean(document.querySelector('.print-area'))
+);
+
+const printButton = byText('Export Report as PDF');
+check('the Export Report as PDF button exists', Boolean(printButton));
+const printsBefore = globalThis.__PRINT_CALLS__ ?? 0;
+if (printButton) await click(printButton, 400);
+check('pressing it opens the browser print dialog (which saves the PDF)', (globalThis.__PRINT_CALLS__ ?? 0) > printsBefore);
+
+// ================================================================ 18. AUTO BACKUP (Phase 5)
+await root.unmount();
+root = await renderAt('/settings', 2400);
+page = text();
+check('settings shows the auto backup panel', page.includes('Auto Backup') && page.includes('Backup Now'), page.slice(0, 400));
+check('it tells the student when the last backup happened', page.includes('শেষ backup:'));
+
+const backupsBefore = await client('/api/backups');
+await click(byText('Backup Now'), 2400);
+const backupsAfter = await client('/api/backups');
+check(
+  'Backup Now takes a real snapshot',
+  backupsAfter.backups.length === backupsBefore.backups.length + 1,
+  `${backupsBefore.backups.length} → ${backupsAfter.backups.length}`
+);
+check('the snapshot carries the whole study data', (backupsAfter.backups[0]?.sizeBytes ?? 0) > 1000);
+check('the panel now shows a fresh backup time', text().includes('শেষ backup:') && /এখনই|মিনিট আগে/.test(text()), text().slice(0, 200));
+
+const autoCall = await client('/api/backups/auto', 'POST', {});
+check('an automatic backup is skipped while a fresh one exists', autoCall.created === false);
+
+await root.unmount();
+root = await renderAt('/settings', 1800);
+check('the snapshot list is visible after a reload', text().includes('Manual backup') || text().includes('Auto backup'));
+
+// ================================================================ 15. EXAM MODE (Phase 5)
+await root.unmount();
+root = await renderAt('/exam', 1800);
+check('Exam Mode screen opens with the setup', text().includes('Exam শুরু করো') && text().includes('প্রশ্ন সংখ্যা'));
+check('the exam setup shows how many questions the scope has', text().includes('pattern-based MCQ'), text().slice(0, 300));
+
+// scope: Computer Network → its chapter → a topic that has generated MCQs
+const examScope = await client('/api/progress-tree');
+const cnSubject = examScope.subjects.find((entry) => entry.name === 'Computer Network');
+const examChapter = cnSubject.chapters[0];
+const examTopic = examChapter.topics.find((entry) => entry.name === 'Network definition') ?? examChapter.topics[0];
+const availability = await client(`/api/exams/availability?topicId=${examTopic.id}`);
+check('availability counts the questions of one topic', availability.topicsInScope === 1, JSON.stringify(availability));
+
+const exam = await client('/api/exams', 'POST', { topicId: examTopic.id, questionCount: 3, durationMinutes: 5 });
+check('an exam is created from one topic only', exam.questions.length === 3 && exam.scopeLabel.includes(examTopic.name), exam.scopeLabel);
+check('the exam never sends the correct answers to the browser', exam.questions.every((question) => !('answer' in question)));
+
+await root.unmount();
+root = await renderAt('/exam', 1800);
+const startButton = byText('Exam শুরু করো');
+await click(startButton, 2200);
+page = text();
+check('starting an exam opens the runner with a timer', /\d\d:\d\d/.test(page) && page.includes('প্রশ্ন 1 /'), page.slice(0, 300));
+check('the runner offers a question map for navigation', document.querySelectorAll('button[aria-label^="প্রশ্ন "]').length >= 3);
+
+// answer the first question, then move on
+const firstOption = [...document.querySelectorAll('input[type=radio]')][0];
+if (firstOption) {
+  await act(async () => {
+    firstOption.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    firstOption.checked = true;
+    firstOption.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+    await wait(120);
+  });
+}
+check('selecting an answer marks it on the question map', text().includes('উত্তর দিয়েছ 1 টা'), text().slice(0, 200));
+
+await click(byText('পরের প্রশ্ন'), 700);
+check('Next moves to the second question', text().includes('প্রশ্ন 2 /'), text().slice(0, 200));
+await click(byText('আগের প্রশ্ন'), 700);
+check('Previous comes back to the first question', text().includes('প্রশ্ন 1 /'));
+
+await click(byText('Exam জমা দাও'), 900);
+check('submitting asks for confirmation first', text().includes('Exam জমা দেবে?'), text().slice(0, 200));
+await click(byText('হ্যাঁ, জমা দাও'), 2400);
+page = text();
+check(
+  'the result shows the full summary (total, correct, wrong, unanswered, score, percentage, time)',
+  ['Total Questions', 'Correct', 'Wrong', 'Unanswered', 'Score', 'Percentage', 'Time Taken'].every((label) => page.includes(label)),
+  page.slice(0, 400)
+);
+check('the unanswered questions are called out, not counted as wrong', page.includes('উত্তর দাওনি'), page.slice(0, 300));
+check('the review shows the correct answer of every question', page.includes('(সঠিক উত্তর)'));
+check('the exam offers Retry', page.includes('আবার exam (Retry)'));
+
+const examList = await client('/api/exams');
+const submittedExam = examList.exams.find((entry) => entry.status === 'submitted' && entry.topicId === examTopic.id) ?? examList.exams[0];
+const graded = await client(`/api/exams/${submittedExam.id}`);
+check(
+  'grading adds up: correct + wrong + unanswered = total',
+  graded.summary.correct + graded.summary.wrong + graded.summary.unanswered === graded.summary.total &&
+    graded.summary.total === graded.questions.length &&
+    graded.summary.total > 0,
+  JSON.stringify(graded.summary)
+);
+check('the saved exam keeps the time the student took', typeof graded.summary.timeTakenSeconds === 'number');
+
+await root.unmount();
+root = await renderAt('/exam', 1800);
+check('past exams are listed with their score', text().includes(examTopic.name) && /\d\/\d/.test(text()), text().slice(0, 400));
+
+const examStats = await client('/api/exams/stats');
+check('exam statistics count the graded exam', examStats.totalExams >= 1 && examStats.totalQuestionsAnswered >= 3, JSON.stringify({ totalExams: examStats.totalExams }));
+
+// an exam can only be submitted once
+const secondSubmit = await realFetch(`${API}/api/exams/${submittedExam.id}/submit`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ answers: {} }),
+});
+check('an exam cannot be submitted twice', secondSubmit.status === 400, String(secondSubmit.status));
+
+await client(`/api/exams/${submittedExam.id}`, 'DELETE');
+await client(`/api/exams/${exam.id}`, 'DELETE');
+
 // ================================================================ 11. OFFLINE / SERVER DOWN
 await root.unmount();
 const workingFetch = globalThis.fetch;

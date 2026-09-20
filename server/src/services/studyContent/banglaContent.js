@@ -424,6 +424,241 @@ export const BANGLA_CONTENT = {
       { q: 'IoT-তে cloud কেন দরকার?', a: 'বহু device-এর ডেটা জমা রাখা, বিশ্লেষণ ও দূর থেকে ব্যবহারের সুবিধার জন্য।' },
     ],
   },
+  // ---- Microcontroller architecture topics (content-mapping fix) ----------
+  'mcu-architecture': {
+    definition:
+      'Microcontroller architecture হলো microcontroller-এর ভেতরের অংশগুলো কীভাবে সাজানো থাকে এবং কীভাবে তারা মিলে একটা প্রোগ্রাম চালায়, তার বর্ণনা। মূল অংশগুলো হলো CPU, memory, I/O port আর bus — CPU-র ভেতরে আবার ALU, Control Unit ও register থাকে।',
+    points: [
+      'CPU (Central Processing Unit) পুরো কাজ চালায় — এটাই microcontroller-এর মস্তিষ্ক।',
+      'ALU (Arithmetic Logic Unit) যোগ, বিয়োগ, তুলনা ও logic (AND, OR, NOT) কাজ করে।',
+      'Control Unit instruction decode করে আর কে কী করবে সেই control signal দেয়।',
+      'Register হলো CPU-র ভেতরের খুব দ্রুত ছোট storage — accumulator (result), program counter (পরের instruction-এর ঠিকানা), stack pointer।',
+      'Memory দুই ধরনের — Flash/ROM-এ প্রোগ্রাম থাকে, RAM-এ চলমান ডেটা থাকে।',
+      'I/O port দিয়ে microcontroller sensor, LED, motor, display-এর সাথে যুক্ত হয়।',
+      'System bus তিনটি — address bus (কোথায়), data bus (কী), control bus (কীভাবে)।',
+      'Clock প্রতি ধাপে timing দেয়; এক ধাপে যা হয় সেটাকে এক machine cycle বলে।',
+    ],
+    steps: [
+      'Clock একটা নতুন machine cycle শুরু করে',
+      'Program counter প্রোগ্রাম মেমোরিতে পরের instruction-এর ঠিকানা দেয়',
+      'Control unit instruction-টা fetch করে decode করে',
+      'ALU register-এর মান নিয়ে কাজ (যোগ/তুলনা) করে',
+      'ফলাফল আবার register বা memory-তে লেখা হয়',
+      'I/O port দিয়ে বাইরের ডেটা আসে বা যায়',
+    ],
+    example:
+      'একটা microcontroller দিয়ে বানানো automatic water pump ভাবো — sensor (I/O port) পানি আছে কি না জানায়, প্রোগ্রাম (Flash) সিদ্ধান্ত নেয়, ALU তুলনা করে দেখে পানি কম, আর control unit relay (output port) চালু করে। পুরো কাজটি clock-এর তালে তালে হয়।',
+    examAnswer:
+      'Microcontroller architecture-এ প্রধান অংশ চারটি — CPU, memory, I/O port এবং bus। CPU-র ভেতরে ALU যোগ/তুলনার কাজ করে, control unit instruction decode করে control signal দেয়, আর register-গুলো সাময়িক data ধরে রাখে। Flash/ROM-এ প্রোগ্রাম এবং RAM-এ চলমান data রাখা হয়। Address, data ও control bus সব অংশকে যুক্ত করে, আর I/O port দিয়ে বাইরের sensor ও device-এর সাথে যোগাযোগ হয়। Clock-এর প্রতিটি ধাপে instruction fetch → decode → execute → write back — এই চক্র চলতে থাকে।',
+    questions: [
+      'Microcontroller architecture কী? প্রধান অংশগুলো লেখো।',
+      'ALU-এর কাজ কী?',
+      'Control unit কীভাবে কাজ করে?',
+      'Register ও memory-এর পার্থক্য লেখো।',
+      'Bus কত প্রকার ও কী কী?',
+      'Microcontroller-এ clock-এর ভূমিকা কী?',
+    ],
+    viva: [
+      { q: 'Microcontroller-এর মস্তিষ্ক কোনটি?', a: 'CPU — এর ভেতরে ALU, control unit ও register থাকে।' },
+      { q: 'ALU কী কী কাজ করে?', a: 'যোগ, বিয়োগ, গুণ-ভাগের মতো arithmetic এবং AND, OR, NOT, তুলনার মতো logic কাজ করে।' },
+      { q: 'Program counter-এর কাজ কী?', a: 'পরের যে instruction চালানো হবে, তার memory address ধরে রাখে — অর্থাৎ প্রোগ্রামের চলার পথ মনে রাখে।' },
+      { q: 'Flash আর RAM-এর পার্থক্য কী?', a: 'Flash (ROM) প্রোগ্রাম স্থায়ীভাবে রাখে, বিদ্যুৎ গেলেও থাকে; RAM চলমান data সাময়িকভাবে রাখে, বিদ্যুৎ গেলে মুছে যায়।' },
+    ],
+  },
+
+  'harvard-von-neumann': {
+    definition:
+      'Microcontroller বা computer-এর ভেতরে প্রোগ্রাম আর data কোথায় রাখা হবে এবং কোন bus দিয়ে যাবে — এই দুই ধরনের সাজানোর নাম Harvard Architecture আর Von Neumann Architecture। Harvard-এ প্রোগ্রাম ও data-র জন্য আলাদা memory ও আলাদা bus থাকে; Von Neumann-এ একটাই memory আর একটাই bus দুই কাজেই লাগে।',
+    points: [
+      'Harvard: প্রোগ্রাম memory আর data memory আলাদা — instruction আর data একই সাথে আনা যায়।',
+      'Harvard: instruction bus ও data bus আলাদা, তাই instruction fetch আর data read একই machine cycle-এ সম্ভব → দ্রুত।',
+      'Harvard: দুই সেট memory ও বেশি pin লাগে, তাই circuit জটিল ও খরচ বেশি।',
+      'Von Neumann: প্রোগ্রাম ও data একই memory-তে রাখা হয়, তাই একটাই memory — সহজ ও কম খরচ।',
+      'Von Neumann: একটাই bus শেয়ার করতে হয়, তাই একসাথে instruction ও data আসতে পারে না — এই সমস্যার নাম Von Neumann bottleneck।',
+      'Harvard বাস্তবে দেখা যায় 8051, PIC, AVR-এর মতো microcontroller আর ARM-এর অনেক processor-এ।',
+      'Von Neumann দেখা যায় 8085/8086 microprocessor আর সাধারণ desktop/laptop computer-এ।',
+      'Stored program ধারণাটি Von Neumann-এর — প্রোগ্রাম আর data দুটোই memory-তে রাখা হয়।',
+    ],
+    steps: [
+      'Harvard: program memory থেকে instruction আনো',
+      'Harvard: data memory থেকে দরকারি data একই সময়ে আনো',
+      'Harvard: দুটি আলাদা bus হওয়ায় কাজ দুটি একই cycle-এ শেষ হয়',
+      'Von Neumann: প্রথমে শেয়ার করা bus দিয়ে instruction আনো',
+      'Von Neumann: তারপর সেই একই bus দিয়ে data আনো বা লিখো',
+      'Von Neumann: bus একটাই হওয়ায় দুটি কাজ কখনো একসাথে হয় না',
+    ],
+    example:
+      'পুরনো 8085 microprocessor আর 8051 microcontroller-এর কথা ভাবো — 8085 (Von Neumann) একই memory ও bus-এ কাজ করে, তাই instruction আনার পর আবার data আনার জন্য অপেক্ষা করতে হয়। 8051 (Harvard) প্রোগ্রাম ও data আলাদা রাখে, তাই একই সময়ে দুটো কাজ করতে পারে এবং নিয়ন্ত্রণের কাজে দ্রুত সাড়া দেয়।',
+    examAnswer:
+      'Harvard Architecture-এ program memory এবং data memory সম্পূর্ণ আলাদা থাকে; instruction bus ও data bus-ও আলাদা, তাই instruction fetch ও data read একই machine cycle-এ হয় — ফলে গতি বেশি। এর অসুবিধা হলো দুই সেট memory ও বেশি pin-এর জন্য circuit জটিল ও খরচ বেশি। Von Neumann Architecture-এ একই memory ও একই bus-এ প্রোগ্রাম ও data দুটোই রাখা হয়; ফলে circuit সহজ, কম খরচ, কিন্তু bus শেয়ার করতে হয় বলে একসাথে instruction ও data আনা যায় না — এটাকে Von Neumann bottleneck বলা হয়। 8051/PIC Harvard-এর উদাহরণ, আর 8085/8086 ও সাধারণ PC Von Neumann-এর উদাহরণ।',
+    questions: [
+      'Harvard Architecture কী? এর বৈশিষ্ট্য লেখো।',
+      'Von Neumann Architecture কী? এর বৈশিষ্ট্য লেখো।',
+      'Von Neumann bottleneck কী?',
+      'Harvard ও Von Neumann architecture-এর পার্থক্য লেখো।',
+      'কোন কোন processor Harvard architecture ব্যবহার করে?',
+    ],
+    viva: [
+      { q: 'Harvard architecture-এ memory কতটি?', a: 'দুটি — একটি program memory, আরেকটি data memory।' },
+      { q: 'Von Neumann bottleneck কেন হয়?', a: 'প্রোগ্রাম ও data একটিই bus ব্যবহার করে, তাই একসাথে দুটি কাজ করা যায় না।' },
+      { q: 'কোনটি সহজ ও খরচ কম?', a: 'Von Neumann — একটাই memory ও একটাই bus লাগে।' },
+      { q: 'কোনটি দ্রুত কাজ করে?', a: 'Harvard — আলাদা bus থাকায় instruction ও data একই সময়ে আনা যায়।' },
+    ],
+    compare: [
+      'বিষয়                | Harvard architecture           | Von Neumann architecture',
+      'মেমোরি               | প্রোগ্রাম ও ডেটা আলাদা           | প্রোগ্রাম ও ডেটা একই মেমোরিতে',
+      'Bus                  | দুটি (instruction + data)       | একটি (শেয়ার করা)',
+      'এক ধাপে কাজ          | instruction ও data একসাথে       | একসাথে নয়, একটার পর একটা',
+      'গতি                  | বেশি                            | তুলনামূলক কম',
+      'খরচ ও জটিলতা         | বেশি                            | কম',
+      'উদাহরণ               | 8051, PIC, AVR                  | 8085, 8086, সাধারণ PC',
+    ],
+  },
+
+  'risc-cisc': {
+    definition:
+      'RISC (Reduced Instruction Set Computer) হলো এমন processor ডিজাইন যেখানে instruction সংখ্যা কম, প্রতিটি instruction ছোট ও সহজ, আর সাধারণত এক clock cycle-এ শেষ হয়। CISC (Complex Instruction Set Computer) হলো এমন ডিজাইন যেখানে instruction সংখ্যা অনেক বেশি ও প্রতিটি instruction জটিল — একটিমাত্র instruction-এ কয়েকটি কাজ হতে পারে।',
+    points: [
+      'RISC-এ fixed-length (সাধারণত একই মাপের) instruction; CISC-এ variable-length (ছোট-বড় মিশ্র) instruction।',
+      'RISC-এ বেশির ভাগ কাজ register-এর মধ্যে হয়; memory-তে যাওয়া-আসা করে শুধু load আর store instruction।',
+      'RISC-এ control unit সাধারণত hardwired; CISC-এ প্রায়ই microcode দিয়ে instruction ভাঙা হয়।',
+      'RISC-এ একটা instruction প্রায় এক cycle-এ শেষ হয়, তাই pipelining সহজ ও গতি বেশি।',
+      'CISC-এ একটা instruction একাধিক cycle নেয়, কিন্তু একই কাজে প্রোগ্রামে instruction সংখ্যা কম লাগে — program memory বাঁচে।',
+      'RISC hardware সরল, তাই বিদ্যুৎ খরচ ও তাপ কম — ব্যাটারি-চালিত ও embedded device-এ বেশি ব্যবহৃত।',
+      'CISC compiler-এর কাজ সহজ করে — কম instruction লিখেই কাজ হয়ে যায়।',
+      'উদাহরণ: RISC — ARM, MIPS, AVR, PIC; CISC — Intel x86, Pentium।',
+    ],
+    steps: [
+      'RISC: ছোট একটা instruction আনা হয়',
+      'RISC: নির্দিষ্ট hardware-এ দ্রুত decode হয় (সাধারণত এক cycle)',
+      'RISC: কাজটা register-এর ভেতরেই শেষ হয়',
+      'CISC: একটাই বড় instruction আনা হয়, যাতে কয়েকটি কাজ লেখা থাকে',
+      'CISC: microcode দিয়ে সেটি ভেতরে ছোট ছোট ধাপে ভাগ হয়',
+      'CISC: অনেক ধাপ শেষে ফলাফল আসে, কিন্তু প্রোগ্রাম ছোট থাকে',
+    ],
+    example:
+      'তোমার mobile phone-এর processor (ARM) RISC — ব্যাটারি বাঁচে, তাই কম বিদ্যুতে দ্রুত কাজ করে। আর পুরনো desktop/laptop-এর Intel processor CISC — এখানে জটিল instruction-এ বড় বড় কাজ একবারেই হয়, তাই প্রোগ্রামের আকার ছোট হয়।',
+    examAnswer:
+      'RISC-এ instruction set ছোট ও সরল; প্রতিটি instruction প্রায় এক clock cycle-এ শেষ হয়, fixed length-এর হয় এবং বেশির ভাগ কাজ register-এর মধ্যে হয় — তাই hardware সরল, pipelining সহজ, গতি বেশি ও বিদ্যুৎ খরচ কম। CISC-এ instruction set বড় ও জটিল; instruction variable length-এর, একটা instruction কয়েকটি কাজ করে এবং microcode দিয়ে ভেতরে ছোট ধাপে ভাগ হয় — ফলে প্রোগ্রামে instruction সংখ্যা কম লাগে, কিন্তু execution time বেশি হয়। ARM, AVR RISC-এর উদাহরণ এবং Intel x86 CISC-এর উদাহরণ।',
+    questions: [
+      'RISC কী? এর বৈশিষ্ট্য লেখো।',
+      'CISC কী? এর বৈশিষ্ট্য লেখো।',
+      'RISC ও CISC-এর পার্থক্য লেখো।',
+      'কোনটি বেশি বিদ্যুৎ সাশ্রয়ী ও কেন?',
+      'Embedded system-এ সাধারণত কোনটি ব্যবহৃত হয়?',
+    ],
+    viva: [
+      { q: 'RISC-এর পূর্ণরূপ কী?', a: 'Reduced Instruction Set Computer।' },
+      { q: 'CISC-এর পূর্ণরূপ কী?', a: 'Complex Instruction Set Computer।' },
+      { q: 'RISC-এ instruction-এর মাপ কেমন?', a: 'Fixed length — সব instruction প্রায় একই মাপের।' },
+      { q: 'কোন ডিজাইনে প্রোগ্রামের আকার ছোট হয়?', a: 'CISC-এ — জটিল instruction একবারেই অনেক কাজ করে।' },
+    ],
+    compare: [
+      'বিষয়                | RISC                           | CISC',
+      'Instruction সংখ্যা   | কম                             | অনেক বেশি',
+      'Instruction মাপ      | fixed (একই মাপ)                | variable (ছোট-বড় মিশ্র)',
+      'Execution সময়        | সাধারণত ১ cycle per instruction| একাধিক cycle লাগে',
+      'Control unit          | hardwired                      | microcode-ভিত্তিক',
+      'Memory ব্যবহার        | বেশি (load/store আলাদা)        | কম (এক instruction-এ অনেক কাজ)',
+      'Hardware জটিলতা       | কম                             | বেশি',
+      'বিদ্যুৎ ও গতি         | কম খরচ, বেশি গতি               | বেশি খরচ, তুলনামূলক কম গতি',
+      'উদাহরণ               | ARM, AVR, MIPS, PIC            | Intel x86, Pentium',
+    ],
+  },
+
+  'interrupt-vector-table': {
+    definition:
+      'Interrupt Vector Table (IVT) হলো প্রোগ্রাম memory-র শুরুতে রাখা একটি নির্দিষ্ট ছোট table, যেখানে প্রতিটি interrupt-এর জন্য লেখা থাকে কোন address থেকে তার কাজ (Interrupt Service Routine) শুরু হবে। কোনো interrupt পড়লে CPU এই table দেখে ঠিক সেই address-এ লাফ দেয় এবং কাজটি সেরে ফিরে আসে।',
+    points: [
+      'Interrupt হলো এমন একটা ঘটনা, যা ঘটলে CPU তার চলতি কাজ থামিয়ে সাথে সাথে সেই ঘটনার কাজ করে — যেমন button চাপা বা timer পূর্ণ হওয়া।',
+      'Interrupt Vector Table-এ প্রতিটি interrupt-এর জন্য একটা vector address লেখা থাকে; CPU সেখানেই লাফ দেয়।',
+      'সেই কাজের ছোট প্রোগ্রামটির নাম Interrupt Service Routine (ISR) — এটাকে interrupt handler-ও বলা হয়।',
+      'রিসেট vector সবচেয়ে প্রথম entry — microcontroller চালু বা reset হলে CPU সেখান থেকে প্রোগ্রাম শুরু করে।',
+      '8051 microcontroller-এর IVT আগে থেকেই ঠিক করা: Reset → 0000H, External Interrupt 0 → 0003H, Timer 0 → 000BH, External Interrupt 1 → 0013H, Timer 1 → 001BH, Serial Port → 0023H।',
+      'প্রতিটি entry-এর মাঝে মাত্র ৮ byte জায়গা থাকে, তাই সাধারণত সেখানে একটা jump instruction রাখা হয় — ISR-টা আলাদা জায়গায় লেখা হয়।',
+      'দুইটি interrupt একসাথে এলে priority অনুযায়ী কোনটা আগে চলবে তা ঠিক হয়; ফিরে আসার address stack-এ সংরক্ষণ করা হয়, যাতে interrupt শেষে main program ঠিক আগের জায়গা থেকেই চলে।',
+      'ISR শেষে সাধারণত interrupt flag পরিষ্কার (clear) করতে হয়, নইলে একই interrupt আবার পড়তে পারে।',
+    ],
+    steps: [
+      'কোনো device interrupt request পাঠায়',
+      'CPU চলতি instruction শেষ করে ফিরে যাওয়ার address stack-এ রেখে দেয়',
+      'CPU Interrupt Vector Table-এর ওই entry থেকে vector address নেয়',
+      'CPU সেই address-এ লাফ দিয়ে ISR চালায়',
+      'ISR কাজ শেষ করে interrupt flag পরিষ্কার করে',
+      'CPU stack থেকে পুরনো address নিয়ে main program-এ ফিরে যায়',
+    ],
+    example:
+      'ভাবো তুমি বই পড়ছ (main program), হঠাৎ দরজার ঘণ্টা বাজল (interrupt)। তুমি বইয়ের পাতায় আঙুল দিয়ে চিহ্ন রাখল (stack-এ address save), দরজা খুললে (ISR চলল), তারপর ফিরে এসে ঠিক সেই পাতার চিহ্ন থেকে পড়া শুরু করলে — microcontroller-এর interrupt-ও ঠিক এইভাবেই কাজ করে।',
+    examAnswer:
+      'Interrupt হলো এমন একটা signal যার ফলে CPU তার চলতি প্রোগ্রাম থামিয়ে জরুরি কাজটি আগে সেরে নেয়। কোন interrupt-এ কোন কাজ হবে তা নির্ধারণ করে Interrupt Vector Table — এটি program memory-র শুরুতে রাখা একটি fixed table, যেখানে প্রতিটি interrupt-এর vector address (অর্থাৎ ISR-এর শুরুর ঠিকানা) লেখা থাকে। Interrupt পড়লে CPU চলতি instruction শেষ করে ফিরে যাওয়ার address stack-এ রাখে, IVT থেকে vector address নিয়ে ISR চালায় এবং ISR শেষে আবার আগের জায়গায় ফিরে যায়। 8051-এ reset vector 0000H, external interrupt 0 → 0003H, timer 0 → 000BH, external interrupt 1 → 0013H, timer 1 → 001BH এবং serial port → 0023H।',
+    questions: [
+      'Interrupt কী? Interrupt-এর প্রয়োজন কী?',
+      'Interrupt Vector Table কী এবং কেন দরকার?',
+      'Vector address কী?',
+      'ISR কী? ISR-এ কী কী থাকা উচিত?',
+      '8051-এর interrupt vector address-গুলো লেখো।',
+      'Reset vector কী কাজ করে?',
+    ],
+    viva: [
+      { q: 'Interrupt vector table কোথায় থাকে?', a: 'প্রোগ্রাম memory-র একদম শুরুতে নির্দিষ্ট কিছু address-এ।' },
+      { q: 'ISR-এর পূর্ণরূপ কী?', a: 'Interrupt Service Routine — interrupt পড়লে যে ছোট প্রোগ্রামটি চলে।' },
+      { q: 'Reset vector-এর address কত?', a: '8051-এ 0000H — microcontroller reset হলে CPU এখান থেকে শুরু করে।' },
+      { q: 'Interrupt-এর priority কী বোঝায়?', a: 'দুইটি interrupt একসাথে এলে কোনটি আগে চলবে সেটির ক্রম।' },
+    ],
+    table: [
+      'Interrupt          | Vector address | সংক্ষিপ্ত কাজ',
+      'Reset              | 0000H          | চালু বা reset হলে প্রোগ্রাম এখান থেকে শুরু',
+      'External INT0      | 0003H          | বাইরের pin-এ signal এলে কাজ শুরু',
+      'Timer 0            | 000BH          | Timer 0 পূর্ণ (overflow) হলে',
+      'External INT1      | 0013H          | দ্বিতীয় বাইরের interrupt pin',
+      'Timer 1            | 001BH          | Timer 1 overflow হলে',
+      'Serial Port        | 0023H          | UART-এ data পাঠানো/পাওয়া শেষ হলে',
+    ],
+  },
+
+  'adc-pwm': {
+    definition:
+      'ADC (Analog to Digital Converter) বাইরের analog voltage-কে microcontroller-এর বোঝার মতো digital সংখ্যায় বদলায়। PWM (Pulse Width Modulation) উল্টো দিকের কাজে দরকার হয় — digital pin-কে খুব দ্রুত on-off করে গড়ে এমন voltage বানানো হয়, যা দিয়ে motor-এর গতি, LED-এর উজ্জ্বলতা বা heater-এর তাপ নিয়ন্ত্রণ করা যায়।',
+    points: [
+      'বাস্তব জগতের সব কিছু analog (তাপ, আলো, শব্দ, voltage), কিন্তু microcontroller সংখ্যা (digital) বোঝে — সেতু বানায় ADC।',
+      'ADC-এর resolution বলে কত সূক্ষ্মভাবে মাপা যাবে — 10-bit হলে মান 0 থেকে 1023 পর্যন্ত 1024 ধাপ।',
+      'Reference voltage (Vref) ঠিক করে কত volt মানে সর্বোচ্চ মান; যেমন Vref = 5V হলে 0V → 0, 5V → 1023।',
+      'ADC-এর গুরুত্বপূর্ণ register — ADC data register (ফলাফল), control ও status register (কোন channel, conversion শুরু/শেষ)।',
+      'ADC সবসময় একটা নির্দিষ্ট সময় নেয় (conversion time) — একে sampling time-ও বলা হয়।',
+      'PWM-এ দুইটি জিনিস গুরুত্বপূর্ণ — period (কত সময়ে একবার চক্র) আর duty cycle (চক্রের কত শতাংশ HIGH থাকে)।',
+      'Duty cycle 50 % মানে গড়ে অর্ধেক voltage; 100 % মানে সবসময় HIGH, 0 % মানে সবসময় LOW।',
+      'PWM-এর ব্যবহার — motor speed control, LED dimmer, servo motor-এর position, inverter-এ voltage নিয়ন্ত্রণ।',
+      'ADC-এর ব্যবহার — temperature sensor, LDR-এ আলো মাপা, potentiometer-এর অবস্থান, battery voltage দেখা।',
+    ],
+    steps: [
+      'ADC: বাইরের analog voltage কে নেওয়া হয় (sample)',
+      'ADC: সেটি সামান্য সময় ধরে রাখা হয় (sample and hold)',
+      'ADC: তুলনা করে voltage-এর সমান digital সংখ্যা তৈরি করে',
+      'ADC: ফলাফল ADC data register-এ রাখা হয় — প্রোগ্রাম সেটি পড়ে',
+      'PWM: timer period value পর্যন্ত গুনে যায়',
+      'PWM: count duty value-এর নিচে থাকলে pin HIGH, তারপর LOW',
+      'PWM: প্রতি period-এ একই নিয়ম পুনরাবৃত্তি হয়, তাই output-এর গড় মান ঠিক থাকে',
+    ],
+    example:
+      'AC-এর fan regulator-এর কথা ভাবো — potentiometer থেকে analog voltage ADC দিয়ে পড়ে microcontroller বলে দেয় কতটা ঘুরবে। আর PWM দিয়ে fan-এর motor-এর গতি ঠিক হয় — সেটি pin-কে সেকেন্ডে হাজারবার on-off করে গড়ে কম বা বেশি voltage দেয়, ফলে motor ধীরে বা জোরে ঘোরে; একই ভাবে PWM দিয়ে LED-এর উজ্জ্বলতাও কম-বেশি করা যায়।',
+    examAnswer:
+      'ADC বা Analog to Digital Converter analog signal-কে digital সংখ্যায় বদলায়, কারণ microcontroller কেবল digital ডেটা প্রক্রিয়া করতে পারে। 10-bit ADC-তে মান 0–1023 পর্যন্ত হয়; reference voltage ঠিক করে সর্বোচ্চ সীমা, যেমন Vref = 5V হলে 5V মানে 1023। ফলাফল ADC data register-এ থাকে এবং conversion-এ কিছুটা সময় লাগে। PWM বা Pulse Width Modulation digital pin-কে দ্রুত on-off করে duty cycle বদলানোর মাধ্যমে গড় output voltage নিয়ন্ত্রণ করে — 50 % duty cycle মানে গড়ে অর্ধেক voltage। এর সাহায্যে motor-এর গতি, LED-এর উজ্জ্বলতা, servo-এর অবস্থান নিয়ন্ত্রণ করা হয়।',
+    questions: [
+      'ADC কী এবং কেন দরকার?',
+      'ADC-এর resolution বলতে কী বোঝায়?',
+      'Reference voltage-এর কাজ কী?',
+      'PWM কী? Duty cycle কী?',
+      'PWM দিয়ে motor-এর গতি কীভাবে নিয়ন্ত্রণ করা হয়?',
+      'ADC ও PWM-এর ব্যবহার লেখো।',
+    ],
+    viva: [
+      { q: '10-bit ADC-তে সর্বোচ্চ মান কত?', a: '1023 (মোট 1024 ধাপ, 0 থেকে শুরু)।' },
+      { q: 'Duty cycle 50 % মানে কী?', a: 'প্রতি period-এর অর্ধেক সময় pin HIGH থাকে, তাই গড় output প্রায় অর্ধেক voltage।' },
+      { q: 'ADC-এর ফলাফল কোথায় জমা হয়?', a: 'ADC data register-এ; প্রোগ্রাম সেখান থেকে পড়ে।' },
+      { q: 'PWM কেন analog output-এর মতো কাজ করে?', a: 'খুব দ্রুত on-off হওয়ায় গড় ভোল্টেজ বদলায়, তাই motor/LED analog-এর মতো সাড়া দেয়।' },
+    ],
+  },
+
 };
 
 /** ids that have hand-written Bangla content */

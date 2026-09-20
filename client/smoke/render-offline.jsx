@@ -299,6 +299,86 @@ check(
   (globalThis.__CLIPBOARD__.at(-1) ?? '').includes('AVOID') && text().includes('Prompt copied successfully!')
 );
 
+// ---- 13. Exam Mode works with no server ---------------------------------
+await root.unmount();
+root = await renderAt('/exam', 2200);
+check('offline Exam Mode opens with the setup', text().includes('Exam শুরু করো') && text().includes('প্রশ্ন সংখ্যা'));
+
+const offlineAvailability = await api('/exams/availability?subjectId=4');
+check(
+  'offline availability finds pattern-based questions for the subject',
+  offlineAvailability.generated > 0 && offlineAvailability.scopeLabel.includes('Microcontroller'),
+  JSON.stringify(offlineAvailability)
+);
+
+await click(byText('Exam শুরু করো'), 2600);
+page = text();
+check('offline exam runs with a timer and a question map', /\d\d:\d\d/.test(page) && page.includes('প্রশ্ন 1 /'));
+check(
+  'every exam question says where it came from',
+  page.includes('pattern-based প্রশ্ন') || page.includes('নিজের প্রশ্ন ব্যাংক'),
+  page.slice(0, 400)
+);
+
+await click(byText('Exam জমা দাও'), 900);
+await click(byText('হ্যাঁ, জমা দাও'), 2600);
+page = text();
+check(
+  'offline exam grades instantly and shows correct/wrong/unanswered',
+  page.includes('Exam Completed') && page.includes('Correct') && page.includes('Unanswered'),
+  page.slice(0, 300)
+);
+const offlineExamStats = await api('/exams/stats');
+check('offline exam statistics count the attempt', offlineExamStats.totalExams === 1, JSON.stringify(offlineExamStats.totalExams));
+
+// ---- 14. advanced analytics + PDF report work offline --------------------
+await root.unmount();
+root = await renderAt('/analytics', 2600);
+page = text();
+check(
+  'offline analytics shows the performance report',
+  page.includes('Performance report') && page.includes('Study sessions'),
+  page.slice(0, 300)
+);
+check('offline analytics explains the numbers in words', page.includes('এই data থেকে যা বোঝা যাচ্ছে'));
+check('offline analytics offers the PDF export', page.includes('Export Report as PDF'));
+
+await root.unmount();
+root = await renderAt('/report', 2600);
+page = text();
+check(
+  'offline PDF report renders every section',
+  ['Smart Semester Study Report', 'Overall Progress', 'Exam results', 'Study statistics'].every((heading) => page.includes(heading)),
+  page.slice(0, 300)
+);
+const offlinePrintButton = byText('Export Report as PDF');
+const offlinePrintsBefore = globalThis.__PRINT_CALLS__ ?? 0;
+if (offlinePrintButton) await click(offlinePrintButton, 400);
+check('the PDF button triggers printing offline too', (globalThis.__PRINT_CALLS__ ?? 0) > offlinePrintsBefore);
+
+// ---- 15. auto backup works offline (no server) ---------------------------
+await root.unmount();
+root = await renderAt('/settings', 2400);
+page = text();
+check('offline settings shows auto backup', page.includes('Auto Backup') && page.includes('Backup Now'));
+
+const offlineBackupApi = await api('/backups/status');
+check('the in-page backend keeps its own backup snapshots', typeof offlineBackupApi.isDue === 'boolean', JSON.stringify(offlineBackupApi).slice(0, 160));
+
+await click(byText('Backup Now'), 2400);
+const offlineBackup = await api('/backups');
+check(
+  'Backup Now stores a snapshot in the in-page database',
+  offlineBackup.backups.length >= 1 && offlineBackup.backups[0].sizeBytes > 1000,
+  JSON.stringify(offlineBackup.backups[0] ?? {})
+);
+check('the snapshot status is shown after backing up', /শেষ backup:/.test(text()));
+
+await globalThis.__OFFLINE_BACKEND__.flush();
+await globalThis.__OFFLINE_RELOAD__();
+const offlineBackupAfterReload = await api('/backups');
+check('the snapshot survives a reload of the in-page database', offlineBackupAfterReload.backups.length >= 1);
+
 // ---- 12. study content works with no server and no AI API ----------------
 await root.unmount();
 root = await renderAt('/subjects/2/chapters/2', 1900);

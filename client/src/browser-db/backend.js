@@ -63,5 +63,13 @@ export async function createBrowserBackend({ SQL, schemaSql, data = null, storag
     }
   };
 
-  return { handle, database, seeded, flush: () => database.flush(), exportBytes: () => database.export() };
+  return {
+    handle,
+    database,
+    seeded,
+    flush: () => database.flush(),
+    exportBytes: () => database.export(),
+    /** Used by the auto-backup restore: swap the database file and reload. */
+    replaceDatabase: (bytes) => database.replaceWith(bytes),
+  };
 }
