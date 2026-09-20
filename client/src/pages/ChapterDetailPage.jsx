@@ -189,7 +189,14 @@ export default function ChapterDetailPage() {
         ) : (
           <div>
             {topics.map((topic) => (
-              <TopicRow key={topic.id} topic={topic} onChanged={refresh} onDeleted={refresh} />
+              <TopicRow
+                  key={topic.id}
+                  topic={topic}
+                  chapter={chapter}
+                  subject={subject}
+                  onChanged={refresh}
+                  onDeleted={refresh}
+                />
             ))}
             {remaining.length > 0 && (
               <p className="muted px-4 py-3">

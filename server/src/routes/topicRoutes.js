@@ -5,6 +5,7 @@ import { subjectRepo } from '../repositories/subjectRepo.js';
 import { activityRepo } from '../repositories/activityRepo.js';
 import { noteRepo } from '../repositories/noteRepo.js';
 import { changeTopicStatus, markRevisionDone } from '../services/topicService.js';
+import { illustrationPrompt, listIllustrationTypes } from '../services/illustrationPromptService.js';
 import { IMPORTANCE } from '../domain/constants.js';
 import { asyncHandler, requireFields, badRequest, notFound, toInt } from '../utils/http.js';
 
@@ -125,5 +126,33 @@ export function topicRouter({ getUserId }) {
     })
   );
 
+  /**
+   * AI illustration prompt (Phase 4). Builds a ready-to-paste image prompt from
+   * this topic's own data — no AI API and no API key involved.
+   */
+  router.post(
+    '/:id/illustration-prompt',
+    asyncHandler(async (req, res) => {
+      res.json(
+        illustrationPrompt(getUserId(req), toInt(req.params.id, 'id'), {
+          type: req.body?.type,
+          variant: req.body?.variant,
+        })
+      );
+    })
+  );
+
+  return router;
+}
+
+/** The illustration types the prompt generator supports. */
+export function illustrationTypeRouter() {
+  const router = Router();
+  router.get(
+    '/types',
+    asyncHandler(async (_req, res) => {
+      res.json(listIllustrationTypes());
+    })
+  );
   return router;
 }

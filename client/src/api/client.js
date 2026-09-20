@@ -72,6 +72,9 @@ export const api = {
     setStatus: (id, status) => request(`/topics/${id}/status`, { method: 'PATCH', body: { status } }),
     completeRevision: (id) => request(`/topics/${id}/revision/complete`, { method: 'POST', body: {} }),
     reorder: (topicIds) => request('/topics/reorder/bulk', { method: 'PATCH', body: { topicIds } }),
+    // Phase 4: builds an image-generation prompt from the topic data (no AI API)
+    illustrationPrompt: (id, { type, variant } = {}) =>
+      request(`/topics/${id}/illustration-prompt`, { method: 'POST', body: { type, variant } }),
   },
 
   notes: {

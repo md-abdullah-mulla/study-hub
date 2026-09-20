@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Pencil, Trash2, RotateCcw, AlertCircle } from 'lucide-react';
+import { ChevronDown, Pencil, Trash2, RotateCcw, AlertCircle, Image } from 'lucide-react';
 import { TopicStatusPicker, TopicStatusBadge } from './TopicStatusPicker.jsx';
 import { TopicNotes } from './TopicNotes.jsx';
 import { Modal, Button, ConfirmDialog } from '../ui/index.jsx';
@@ -7,16 +7,23 @@ import { REVISION_STAGE_LABEL, IMPORTANCE_LABEL } from '../../lib/status.js';
 import { relativeDays, daysSince, formatDateShort } from '../../lib/format.js';
 import { api } from '../../api/client.js';
 import { useToast } from '../../state/ToastContext.jsx';
+import CreateIllustrationModal from '../illustration/CreateIllustrationModal.jsx';
 
 /**
- * One topic line: status buttons, revision badge, expandable notes and
- * edit/delete actions. All progress changes go to the API, then the parent
- * refreshes so every percentage on screen stays correct.
+ * One topic line: status buttons, revision badge, expandable notes,
+ * edit/delete actions and 🖼️ Create Illustration (Phase 4). All progress
+ * changes go to the API, then the parent refreshes so every percentage on
+ * screen stays correct.
+ *
+ * `subject` and `chapter` are optional but recommended: they let the
+ * illustration modal show (and use) the full Subject → Chapter → Topic path
+ * without asking the student to type anything again.
  */
-export function TopicRow({ topic, onChanged, onDeleted, defaultOpen = false }) {
+export function TopicRow({ topic, subject, chapter, onChanged, onDeleted, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   const [busy, setBusy] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [illustrationOpen, setIllustrationOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [form, setForm] = useState({
     name: topic.name,
@@ -138,7 +145,25 @@ export function TopicRow({ topic, onChanged, onDeleted, defaultOpen = false }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
+          {/* Desktop keeps the full label visible; on mobile the icon button
+              (with aria-label + title) and the expanded panel both offer it. */}
+          <button
+            onClick={() => setIllustrationOpen(true)}
+            className="hidden items-center gap-1 rounded-lg border border-ink-200 px-2 py-1 text-xs font-medium text-ink-600 hover:bg-brand-50 hover:text-brand-700 sm:inline-flex"
+            aria-label={`${topic.name} — 🖼️ Create Illustration`}
+          >
+            <Image className="h-3.5 w-3.5" />
+            Create Illustration
+          </button>
           <TopicStatusPicker value={topic.status} onChange={changeStatus} disabled={busy} />
+          <button
+            onClick={() => setIllustrationOpen(true)}
+            className="rounded-lg p-1.5 text-ink-400 hover:bg-brand-50 hover:text-brand-600"
+            aria-label={`${topic.name} এর illustration prompt তৈরি করো`}
+            title="🖼️ Create Illustration"
+          >
+            <Image className="h-3.5 w-3.5" />
+          </button>
           <button
             onClick={() => {
               setForm({
@@ -179,6 +204,9 @@ export function TopicRow({ topic, onChanged, onDeleted, defaultOpen = false }) {
                 <RotateCcw className="h-3.5 w-3.5" /> Revision complete
               </Button>
             )}
+            <Button variant="ghost" onClick={() => setIllustrationOpen(true)}>
+              <Image className="h-3.5 w-3.5" /> 🖼️ Create Illustration
+            </Button>
           </div>
 
           <TopicNotes topicId={topic.id} />
@@ -242,6 +270,14 @@ export function TopicRow({ topic, onChanged, onDeleted, defaultOpen = false }) {
           </div>
         </div>
       </Modal>
+
+      <CreateIllustrationModal
+        open={illustrationOpen}
+        onClose={() => setIllustrationOpen(false)}
+        topic={topic}
+        chapter={chapter}
+        subject={subject}
+      />
 
       <ConfirmDialog
         open={confirmOpen}

@@ -8,12 +8,13 @@ import { buildBackup, topicsToCsv } from '../services/exportService.js';
 import { statusRouter } from './statusRoutes.js';
 import { subjectRouter } from './subjectRoutes.js';
 import { chapterRouter } from './chapterRoutes.js';
-import { topicRouter } from './topicRoutes.js';
+import { topicRouter, illustrationTypeRouter } from './topicRoutes.js';
 import { noteRouter } from './noteRoutes.js';
 import { planRouter } from './planRoutes.js';
 import { sessionRouter } from './sessionRoutes.js';
 import { quizRouter, quizResultRouter } from './quizRoutes.js';
 import { STATUS_LABELS_BN, IMPORTANCE } from '../domain/constants.js';
+import { ILLUSTRATION_TYPES } from '../services/illustration/promptBuilder.js';
 import { asyncHandler } from '../utils/http.js';
 
 export function apiRouter({ getUserId }) {
@@ -29,6 +30,7 @@ export function apiRouter({ getUserId }) {
         program: 'Diploma in Computer Science & Technology',
         topicStatusLabels: STATUS_LABELS_BN,
         importanceLevels: IMPORTANCE,
+        illustrationTypes: ILLUSTRATION_TYPES,
         phase: 2,
       });
     })
@@ -104,6 +106,7 @@ export function apiRouter({ getUserId }) {
   router.use('/subjects', subjectRouter({ getUserId }));
   router.use('/chapters', chapterRouter({ getUserId }));
   router.use('/topics', topicRouter({ getUserId }));
+  router.use('/illustration', illustrationTypeRouter());
   router.use('/notes', noteRouter({ getUserId }));
   router.use('/plan', planRouter({ getUserId }));
   router.use('/sessions', sessionRouter({ getUserId }));

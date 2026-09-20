@@ -799,3 +799,148 @@ test('quiz attempts are reviewed, listed and deletable with the quiz', async () 
   assert.equal((await get('/api/quiz-results/weak-topics')).body.weakTopics.length, 0);
   assert.equal((await get('/api/quizzes')).body.summary.averageAccuracy, 0, 'accuracy is 0 again, not a stale number');
 });
+
+// ---------------------------------------------------------------------------
+// Phase 4 (first feature) — AI illustration prompt generator
+// ---------------------------------------------------------------------------
+
+test('illustration types are offered without any AI API or key', async () => {
+  const types = await get('/api/illustration/types');
+  assert.equal(types.status, 200);
+  assert.equal(types.body.types.length, 5);
+  assert.deepEqual(
+    types.body.types.map((t) => t.value),
+    ['concept_diagram', 'process_flow', 'architecture_diagram', 'educational_illustration', 'concept_visualization']
+  );
+  assert.equal(types.body.defaultType, 'educational_illustration', 'the spec default');
+  assert.match(types.body.note, /API key লাগে না/);
+
+  const meta = await get('/api/meta');
+  assert.deepEqual(
+    meta.body.illustrationTypes.map((t) => t.value),
+    types.body.types.map((t) => t.value),
+    'the UI reads the same list from /api/meta'
+  );
+});
+
+test('the prompt is built from the topic data and is genuinely topic-specific', async () => {
+  const iot = await findSubject('IoT & IoT Architecture');
+  const mqtt = iot.chapters[0].topics.find((t) => t.name === 'MQTT');
+
+  const response = await post(`/api/topics/${mqtt.id}/illustration-prompt`, { type: 'concept_diagram' });
+  assert.equal(response.status, 200);
+  const body = response.body;
+  const prompt = body.prompt;
+
+  assert.equal(body.subject.name, 'IoT & IoT Architecture', 'the real subject data is used');
+  assert.equal(body.chapter.id, mqtt.chapterId);
+  assert.equal(body.topic.name, 'MQTT');
+  assert.equal(body.type, 'concept_diagram');
+  assert.equal(body.variant, 0);
+  assert.equal(body.variantCount, 3);
+
+  // every required part of the prompt (spec §4)
+  for (const expected of ['IoT & IoT Architecture', 'MQTT', 'Concept Diagram', 'Diploma-level Computer Science']) {
+    assert.ok(prompt.includes(expected), `the prompt must mention ${expected}`);
+  }
+  for (const component of ['MQTT Publisher', 'MQTT Broker', 'MQTT Subscriber', 'MQTT Topic']) {
+    assert.ok(prompt.includes(component), `the prompt must describe ${component}`);
+  }
+  assert.match(prompt, /Publisher → Broker/, 'the relationship between the parts must be spelled out');
+  assert.match(prompt, /arrows/i, 'clear arrows must be requested');
+  assert.match(prompt, /educational textbook/i, 'educational textbook style');
+  assert.match(prompt, /No decorative or unrelated elements/i, 'decorative clutter must be refused');
+  assert.match(prompt, /Bangladeshi Diploma-level/i, 'the Bangladeshi study context');
+
+  // no generic prompt, and no AI service anywhere in it
+  assert.notEqual(prompt.trim(), 'Create an image about MQTT');
+  assert.ok(!/openai|gemini|api key|https?:\/\//i.test(prompt), 'no API or URL belongs in the prompt');
+  assert.ok(body.profile.components.length >= 4);
+  assert.equal(body.profile.source, 'library');
+});
+
+test('each illustration type produces a different, type-appropriate prompt', async () => {
+  const iot = await findSubject('IoT & IoT Architecture');
+  const mqtt = iot.chapters[0].topics.find((t) => t.name === 'MQTT');
+  const types = ['concept_diagram', 'process_flow', 'architecture_diagram', 'educational_illustration', 'concept_visualization'];
+
+  const prompts = [];
+  for (const type of types) {
+    const response = await post(`/api/topics/${mqtt.id}/illustration-prompt`, { type });
+    assert.equal(response.status, 200);
+    prompts.push(response.body.prompt);
+  }
+  assert.equal(new Set(prompts).size, types.length, 'every type must give a different prompt');
+
+  assert.match(prompts[1], /Show the process in exactly this order/, 'process flow asks for ordered steps');
+  assert.match(prompts[2], /inside its own labelled box/, 'architecture asks for labelled blocks');
+  assert.match(prompts[3], /simple, realistic objects/, 'educational illustration asks for a recognisable scene');
+  assert.match(prompts[4], /truthful/, 'concept visualization must stay technically truthful');
+});
+
+test('regenerate walks through variants and then suggests the next type', async () => {
+  const iot = await findSubject('IoT & IoT Architecture');
+  const mqtt = iot.chapters[0].topics.find((t) => t.name === 'MQTT');
+
+  const seen = new Set();
+  const meta = await post(`/api/topics/${mqtt.id}/illustration-prompt`, { type: 'concept_diagram', variant: 0 });
+  for (let variant = 0; variant < meta.body.variantCount; variant += 1) {
+    const response = await post(`/api/topics/${mqtt.id}/illustration-prompt`, { type: 'concept_diagram', variant });
+    assert.equal(response.body.variant, variant);
+    seen.add(response.body.prompt);
+    assert.ok(response.body.nextType && response.body.nextType !== 'concept_diagram');
+  }
+  assert.equal(seen.size, meta.body.variantCount, 'each variant must read differently');
+
+  // the cycle wraps around instead of failing
+  const wrapped = await post(`/api/topics/${mqtt.id}/illustration-prompt`, {
+    type: 'concept_diagram',
+    variant: meta.body.variantCount,
+  });
+  assert.equal(wrapped.body.variant, 0);
+});
+
+test('a brand new topic still gets a specific prompt (no hardcoding)', async () => {
+  // a subject the library knows nothing about, added the way a student would
+  const subject = await post('/api/subjects', { name: 'Electrical Circuits' });
+  assert.equal(subject.status, 201);
+  const chapter = await post('/api/chapters', { subjectId: subject.body.id, name: 'Basic Electricity' });
+  const created = await post('/api/topics', {
+    chapterId: chapter.body.id,
+    name: 'Ohms Law',
+    description: 'Voltage, current, resistance',
+  });
+  assert.equal(created.status, 201);
+
+  const response = await post(`/api/topics/${created.body.id}/illustration-prompt`, {
+    type: 'educational_illustration',
+  });
+  const prompt = response.body.prompt;
+  assert.equal(response.body.profile.source, 'derived', 'nothing in the library matches this topic');
+  assert.ok(prompt.includes('Ohms Law'), 'the topic name is used');
+  assert.ok(prompt.includes('Electrical Circuits'), 'the subject gives the context');
+  for (const part of ['Voltage', 'current', 'resistance']) {
+    assert.ok(prompt.includes(part), `the student description supplies the parts (${part})`);
+  }
+  assert.ok(!prompt.includes('Create an image about Ohms Law'), 'still not a generic one-liner');
+
+  // a known topic in the same subject still uses the library
+  const mqtt = await post(
+    `/api/topics/${(await findSubject('IoT & IoT Architecture')).chapters[0].topics[0].id}/illustration-prompt`,
+    { type: 'educational_illustration' }
+  );
+  assert.equal(mqtt.body.profile.source, 'library');
+  assert.notEqual(prompt, mqtt.body.prompt, 'two different topics never produce the same prompt');
+
+  await del(`/api/subjects/${subject.body.id}`);
+});
+
+test('illustration prompt validation is honest', async () => {
+  const iot = await findSubject('IoT & IoT Architecture');
+  const mqtt = iot.chapters[0].topics.find((t) => t.name === 'MQTT');
+
+  assert.equal((await post(`/api/topics/${mqtt.id}/illustration-prompt`, { type: 'hologram' })).status, 400);
+  assert.equal((await post(`/api/topics/${mqtt.id}/illustration-prompt`, { variant: -1 })).status, 400);
+  assert.equal((await post(`/api/topics/${mqtt.id}/illustration-prompt`, { variant: 'two' })).status, 400);
+  assert.equal((await post('/api/topics/999999/illustration-prompt', {})).status, 404);
+});

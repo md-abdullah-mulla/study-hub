@@ -66,9 +66,15 @@ const byText = (label, tag = 'button') =>
 
 async function click(el, settle = 700) {
   if (!el) throw new Error('element not found');
+  // The event fires inside act(); the waiting happens outside it, because a real
+  // network request does not resolve while act() is still awaiting.
   await act(async () => {
     el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
-    await wait(settle);
+    await wait(30);
+  });
+  await wait(settle);
+  await act(async () => {
+    await wait(60);
   });
 }
 
@@ -405,6 +411,61 @@ check(
 
 await client(`/api/quizzes/${quiz.id}`, 'DELETE');
 await client(`/api/topics/${mcqTopic.id}/status`, 'PATCH', { status: 'not_started' });
+
+// ================================================================ 13. ILLUSTRATION PROMPT (Phase 4)
+await root.unmount();
+root = await renderAt(`/subjects/${cn.id}/chapters/${quizChapter.id}`, 1800);
+check('every topic row offers Create Illustration', text().includes('Create Illustration'));
+check('the quick illustration icon sits on each topic row', document.querySelectorAll('button[aria-label*="illustration prompt"]').length > 0);
+
+await click(byText('Create Illustration'), 1200);
+page = text();
+check(
+  'the illustration modal opens with Subject, Chapter and Topic already filled in',
+  page.includes('Create Educational Illustration') && page.includes('Computer Network') && page.includes(quizChapter.name) && page.includes('Network definition'),
+  page.slice(0, 400)
+);
+check('Educational Illustration is the default type', Boolean(byText('Educational Illustration')));
+
+await click(byText('Generate Prompt'), 2000);
+page = text();
+check('Generate Prompt produces a topic-specific prompt', page.includes('HTTP') || page.includes('Client') || page.includes('network'), page.slice(0, 600));
+check(
+  'the generated prompt names the audience and the design rules',
+  page.includes('Diploma-level Computer Science') && page.includes('educational textbook')
+);
+
+const firstPrompt = [...document.querySelectorAll('pre')].map((el) => el.textContent).join('\n');
+check('the prompt text box shows the full prompt', firstPrompt.includes('Subject: Computer Network') && firstPrompt.includes('AVOID'));
+
+await click(byText('Regenerate'), 2000);
+const secondPrompt = [...document.querySelectorAll('pre')].map((el) => el.textContent).join('\n');
+check('Regenerate produces a different prompt for the same topic', Boolean(secondPrompt) && secondPrompt !== firstPrompt);
+
+// the dialog that holds the generated prompt (other modals may be mounted too)
+const promptDialog = [...document.querySelectorAll('[role="dialog"]')].find((dialog) => dialog.querySelector('pre'));
+const editButton = [...(promptDialog?.querySelectorAll('button') ?? [])].find((button) =>
+  button.textContent.includes('Edit Prompt')
+);
+check('the generated prompt offers an edit control', Boolean(editButton));
+await click(editButton, 800);
+const editor = promptDialog?.querySelector('textarea');
+check('the prompt can be edited in a textarea', Boolean(editor) && editor.value === secondPrompt, editor?.value?.slice(0, 60));
+if (editor) await type(editor, `${secondPrompt}\n\nMY OWN LINE`);
+await click(byText('Copy Prompt'), 1200);
+const clipboardText = globalThis.__CLIPBOARD__.at(-1) ?? '';
+check('Copy Prompt copies the (edited) prompt to the clipboard', clipboardText.includes('MY OWN LINE'));
+check('Copy Prompt reports success', text().includes('Prompt copied successfully!') || text().includes('Copied!'), text().slice(0, 200));
+
+// the API itself must stay free of any AI provider
+const promptApi = await client(`/api/topics/${mcqTopic.id}/illustration-prompt`, 'POST', { type: 'architecture_diagram' });
+check(
+  'no AI API is involved: the prompt is plain text built from the topic data',
+  promptApi.prompt.includes(mcqTopic.name) && !/openai|gemini|api key/i.test(promptApi.prompt)
+);
+
+await root.unmount();
+root = await renderAt('/quiz', 1200); // leave the app on a normal page
 
 await root.unmount();
 root = await renderAt('/notes', 1400);

@@ -48,9 +48,15 @@ const byText = (label) => [...document.querySelectorAll('button')].find((el) => 
 
 async function click(element, settle = 900) {
   if (!element) throw new Error('element not found');
+  // The event fires inside act(); the waiting happens outside it, because a real
+  // network request does not resolve while act() is still awaiting.
   await act(async () => {
     element.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true }));
-    await wait(settle);
+    await wait(30);
+  });
+  await wait(settle);
+  await act(async () => {
+    await wait(60);
   });
 }
 
@@ -263,7 +269,37 @@ check(
   afterReloadQuiz.summary.attempts === 1 && afterReloadQuiz.results[0].accuracy === 100
 );
 
-// ---- 11. later-phase screens stay honest --------------------------------
+// ---- 11. Illustration prompt generator works with no server --------------
+await root.unmount();
+root = await renderAt('/subjects/2/chapters/2', 1900);
+check('offline topic rows offer Create Illustration too', text().includes('Create Illustration'));
+
+await click(byText('Create Illustration'), 1200);
+check(
+  'offline illustration modal is pre-filled from the in-page database',
+  text().includes('Create Educational Illustration') && text().includes('IoT'),
+  text().slice(-400)
+);
+
+await click(byText('Generate Prompt'), 1800);
+const offlinePrompt = [...document.querySelectorAll('pre')].map((el) => el.textContent).join('\n');
+check(
+  'offline prompt is topic-specific and mentions no AI API key',
+  offlinePrompt.includes('AVOID') && offlinePrompt.includes('Diploma-level Computer Science') && !/api key/i.test(offlinePrompt),
+  offlinePrompt.slice(0, 200)
+);
+
+await click(byText('Regenerate'), 1800);
+const offlinePrompt2 = [...document.querySelectorAll('pre')].map((el) => el.textContent).join('\n');
+check('offline Regenerate gives a different prompt', Boolean(offlinePrompt2) && offlinePrompt2 !== offlinePrompt);
+
+await click(byText('Copy Prompt'), 1200);
+check(
+  'offline Copy Prompt puts the prompt on the clipboard',
+  (globalThis.__CLIPBOARD__.at(-1) ?? '').includes('AVOID') && text().includes('Prompt copied successfully!')
+);
+
+// ---- 12. later-phase screens stay honest --------------------------------
 await root.unmount();
 root = await renderAt('/ai');
 check('AI screen still says it is a later phase', text().includes('Phase 4') && text().includes('এখনো তৈরি হয়নি'));

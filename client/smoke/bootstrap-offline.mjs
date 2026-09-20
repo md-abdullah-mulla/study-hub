@@ -41,6 +41,20 @@ dom.window.URL.createObjectURL ??= () => 'blob:test';
 dom.window.URL.revokeObjectURL ??= () => {};
 globalThis.URL.createObjectURL ??= () => 'blob:test';
 globalThis.URL.revokeObjectURL ??= () => {};
+// jsdom implements no clipboard, so provide one (real browsers ship the async
+// Clipboard API, which is the path the app takes first)
+const clipboardWrites = [];
+Object.defineProperty(dom.window.navigator, 'clipboard', {
+  configurable: true,
+  value: {
+    writeText: async (text) => {
+      clipboardWrites.push(text);
+    },
+    readText: async () => clipboardWrites[clipboardWrites.length - 1] ?? '',
+  },
+});
+globalThis.__CLIPBOARD__ = clipboardWrites;
+
 globalThis.ResizeObserver = dom.window.ResizeObserver = class {
   observe() {}
   unobserve() {}
