@@ -22,9 +22,16 @@ await esbuild.build({
   loader: { '.jsx': 'jsx' },
   jsx: 'automatic',
   external: ['jsdom', 'sql.js'],
+  // src/lib/env.js reads `import.meta.env`, so the whole object must be
+  // defined here (defining a single member would never match that access).
   define: {
-    'import.meta.env.VITE_API_MODE': '"local"',
-    'import.meta.env.BASE_URL': '"/"',
+    'import.meta.env': JSON.stringify({
+      MODE: 'pages',
+      BASE_URL: '/',
+      VITE_API_MODE: 'local',
+      DEV: false,
+      PROD: true,
+    }),
   },
   plugins: [
     {
